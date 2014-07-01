@@ -135,7 +135,7 @@ curl -XPUT 'localhost:9200/test/books/1' -d '
 }
 '
 
-# here we do refresh for the books
+# here we do refresh for the books index
 
 curl -XGET 'localhost:9200/test/_refresh'
 

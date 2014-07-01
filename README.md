@@ -9,24 +9,22 @@ This process is also known as denormalization.
 Denormalization can be defined as the copying of the same data into multiple documents 
 in order to simplify query processing or to fit the user’s data into a particular data model.
 
-It useful for creating searchable fields from a single authoritative source of information.
-
 See the example below how to create a library catalog entry for the book "Goethe's Faust" and
 making it searchable by referencing variant forms of the author's name at indexing time.
 
 The analyzer is capable of fetching content from other fields in other documents because
 Elasticsearch documents have a near-real-time (NRT) read property. The mapping phase of this analyzer
-can safely execute a get request and transfers field values from already indexed documents
+can safely execute a get request and transfer field values from already indexed documents
 into a new document.
 
 Since the documents are denormalized, it is required to reindex the whole index when 
 the referenced data source has changed.
 
 Note, in a search response, the `_source` field will not reflect the included content 
-because `_source` is immutable. It is important for Elasticsearch internal functions 
+because the `_source` field is immutable. It is important for Elasticsearch internal functions 
 that `_source` field value represents exactly what the user pushed over the API into 
 the index. But by following the coordinates of the referred document it is easy 
-to lookup the included document content.
+to lookup the included document content afterwards.
 
 ## Versions
 
@@ -54,6 +52,25 @@ The Maven project site is available at [Github](http://jprante.github.io/elastic
 ## Issues
 
 All feedback is welcome! If you find issues, please post them at [Github](https://github.com/jprante/elasticsearch-analysis-reference/issues)
+
+# Documentation
+
+This plugin introduces a new mapping field type named `ref`. If a field with name `fieldname` 
+is of type `ref`, the values in a document must contain a coordinate of the form
+
+    "fieldname" : {
+        "index" : ...
+        "type" : ...
+        "id" : ...
+        "fields" : ...
+    }
+    
+where `index/type/id` is the coordinate of a document in the ELasticsearch cluster, and `fields` denotes
+one or more fields from where the values are fetched. If there is more than one value, all values are
+appended into an array (multivalued field).
+
+If the coordinate does not point to a valid document, the analyzer does not bail out with failure, 
+but the referencing is skipped.
 
 # Example
 
@@ -193,7 +210,7 @@ All feedback is welcome! If you find issues, please post them at [Github](https:
     }
     '
     
-    # here we do refresh for the books
+    # here we do refresh for the books index
     
     curl -XGET 'localhost:9200/test/_refresh'
     
@@ -216,6 +233,43 @@ All feedback is welcome! If you find issues, please post them at [Github](https:
        }
     }
     '
+    
+Result of both searches for `Gūta, Yūhān Wulfgāng fun` is `Johann Wolfgang Goethe` !
+    
+    {
+      "took" : 1,
+      "timed_out" : false,
+      "_shards" : {
+        "total" : 5,
+        "successful" : 5,
+        "failed" : 0
+      },
+      "hits" : {
+        "total" : 1,
+        "max_score" : 0.067124054,
+        "hits" : [ {
+          "_index" : "test",
+          "_type" : "books",
+          "_id" : "1",
+          "_score" : 0.067124054,
+          "_source":
+    {
+      "title" : "Faust",
+      "author" : {
+          "preferredName" : "Johann Wolfgang Goethe",
+          "variantName" : {
+              "index" : "test",
+              "type" : "authorities",
+              "id" : "Johann Wolfgang Goethe",
+              "fields" : "variants"
+          }
+      }
+    }
+    
+        } ]
+      }
+    }
+    
 
 # License
 
