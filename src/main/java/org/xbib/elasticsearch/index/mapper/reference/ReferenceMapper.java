@@ -6,6 +6,7 @@ import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.unit.TimeValue;
 import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.common.xcontent.XContentParser;
+import org.elasticsearch.index.get.GetField;
 import org.elasticsearch.index.mapper.FieldMapperListener;
 import org.elasticsearch.index.mapper.Mapper;
 import org.elasticsearch.index.mapper.MapperParsingException;
@@ -61,8 +62,7 @@ public class ReferenceMapper implements Mapper {
             Mapper contentMapper = contentBuilder.build(context);
             Mapper refMapper = refBuilder.build(context);
             context.path().remove();
-            return new ReferenceMapper(name, contentMapper, refMapper,
-                    client, clientSettings);
+            return new ReferenceMapper(name, contentMapper, refMapper, client, clientSettings);
         }
     }
 
@@ -86,8 +86,7 @@ public class ReferenceMapper implements Mapper {
                 String fieldName = entry.getKey();
                 Object fieldNode = entry.getValue();
                 if (fieldName.equals("ref")) {
-                    builder.ref(parserContext.typeParser("string")
-                            .parse(name, (Map<String, Object>) fieldNode, parserContext));
+                    builder.ref(parserContext.typeParser("string").parse(name, (Map<String, Object>) fieldNode, parserContext));
                 }
             }
             return builder;
@@ -193,9 +192,12 @@ public class ReferenceMapper implements Mapper {
                     .get(TimeValue.timeValueSeconds(5));
             if (response != null) {
                 for (String field : fields) {
-                    for (Object object : response.getField(field).getValues()) {
-                        context.externalValue(object);
-                        refMapper.parse(context);
+                    GetField getField = response.getField(field);
+                    if (getField != null) {
+                        for (Object object : getField.getValues()) {
+                            context.externalValue(object);
+                            refMapper.parse(context);
+                        }
                     }
                 }
             }
@@ -236,12 +238,12 @@ public class ReferenceMapper implements Mapper {
 
     private String parseIndex(String content) {
         String[] s = content.split("/");
-        return s.length > 1 ? s[0] : null;
+        return s.length > 2 ? s[0] : null;
     }
 
     private String parseType(String content) {
         String[] s = content.split("/");
-        return s.length > 1 ? s[1] : null;
+        return s.length > 2 ? s[1] : null;
     }
 
     private String[] parseFields(String content) {

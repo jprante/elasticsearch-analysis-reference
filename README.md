@@ -30,11 +30,12 @@ to lookup the included document content afterwards.
 
 | Elasticsearch  | Plugin       | Release date |
 | -------------- | ------------ | ------------ |
+| 1.3.1          | 1.3.0.0      | Aug  5, 2014 |
 | 1.2.1          | 1.2.1.0      | Jul  1, 2014 |
 
 ## Installation
 
-    ./bin/plugin -install analysis-reference -url http://xbib.org/repository/org/xbib/elasticsearch/plugin/elasticsearch-analysis-reference/1.2.1.0/elasticsearch-analysis-reference-1.2.1.0-plugin.zip
+    ./bin/plugin -install analysis-reference -url http://xbib.org/repository/org/xbib/elasticsearch/plugin/elasticsearch-analysis-reference/1.3.0.0/elasticsearch-analysis-reference-1.3.0.0-plugin.zip
 
 Do not forget to restart the node after installing.
 
@@ -42,6 +43,7 @@ Do not forget to restart the node after installing.
 
 | File                                                  | SHA1                                     |
 | ----------------------------------------------------- | -----------------------------------------|
+| elasticsearch-analysis-reference-1.3.0.0-plugin.zip   | 1151801eb4de2ecb8d6dcae41a999c8b6b0a6579 |
 | elasticsearch-analysis-reference-1.2.1.0-plugin.zip   | 1bdaf7d1b0cc8c8a08e1b5487ab39d351c9365d7 |
 
 

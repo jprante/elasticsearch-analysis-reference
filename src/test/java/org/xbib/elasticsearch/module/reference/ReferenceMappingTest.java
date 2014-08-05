@@ -64,17 +64,12 @@ public class ReferenceMappingTest extends Assert {
                 new PreBuiltAnalyzerProviderFactory("keyword", AnalyzerScope.INDEX, new KeywordAnalyzer()));
         Settings settings = ImmutableSettings.Builder.EMPTY_SETTINGS;
         AnalysisService analysisService = new AnalysisService(index, settings, null, analyzerFactoryFactories, null, null, null);
-        mapperParser = new DocumentMapperParser(index, settings,
+        this.mapperParser = new DocumentMapperParser(index, settings,
                 analysisService,
                 new PostingsFormatService(index),
                 new DocValuesFormatService(index),
-                new SimilarityLookupService(index, settings));
-        Settings indexSettings = ImmutableSettings.settingsBuilder()
-                .put("ref_index", "test")
-                .put("ref_type", "test")
-                .put("ref_fields", "myfield").build();
-        mapperParser.putTypeParser(ReferenceMapper.CONTENT_TYPE,
-                new ReferenceMapper.TypeParser(client, indexSettings));
+                new SimilarityLookupService(index, settings),
+                null);
     }
 
     @AfterClass
@@ -85,6 +80,13 @@ public class ReferenceMappingTest extends Assert {
 
     @Test
     public void testRefMappings() throws Exception {
+        Settings indexSettings = ImmutableSettings.settingsBuilder()
+                .put("ref_index", "test")
+                .put("ref_type", "test")
+                .put("ref_fields", "myfield").build();
+        mapperParser.putTypeParser(ReferenceMapper.CONTENT_TYPE,
+                new ReferenceMapper.TypeParser(client, indexSettings));
+
         String mapping = copyToStringFromClasspath("/ref-mapping.json");
         DocumentMapper docMapper = mapperParser.parse(mapping);
         BytesReference json = jsonBuilder().startObject().field("_id", 1).field("someField", "1234").endObject().bytes();
@@ -112,21 +114,48 @@ public class ReferenceMappingTest extends Assert {
     }
 
     @Test
-    public void testRef() throws Exception {
+    public void testRefInDoc() throws Exception {
+        Settings indexSettings = ImmutableSettings.EMPTY;
+        mapperParser.putTypeParser(ReferenceMapper.CONTENT_TYPE,
+                new ReferenceMapper.TypeParser(client, indexSettings));
+
         String mapping = copyToStringFromClasspath("/ref-mapping-authorities.json");
         DocumentMapper docMapper = mapperParser.parse(mapping);
         BytesReference json = jsonBuilder().startObject()
                 .field("_id", 1)
                 .field("title", "A title")
                 .startObject("author")
-                .field("index", "test")
-                .field("type", "authorities")
-                .field("id", "1")
-                .field("fields", "author")
+                    .field("index", "test")
+                    .field("type", "authorities")
+                    .field("id", "1")
+                   .field("fields", "author")
                 .endObject()
                 .endObject().bytes();
         ParseContext.Document doc = docMapper.parse(json).rootDoc();
         assertEquals(doc.getFields("author.ref").length, 1);
         assertEquals(doc.getFields("author.ref")[0].stringValue(), "John Doe");
     }
+
+    @Test
+    public void testRefFromID() throws Exception {
+        Settings indexSettings = ImmutableSettings.settingsBuilder()
+                .put("ref_index", "test")
+                .put("ref_type", "authorities")
+                .put("ref_fields", "author").build();
+        mapperParser.putTypeParser(ReferenceMapper.CONTENT_TYPE,
+                new ReferenceMapper.TypeParser(client, indexSettings));
+
+        System.err.println("testRefFromID");
+        String mapping = copyToStringFromClasspath("/ref-mapping-from-id.json");
+        DocumentMapper docMapper = mapperParser.parse(mapping);
+        BytesReference json = jsonBuilder().startObject()
+                .field("_id", 1)
+                .field("title", "A title")
+                .field("author", "1")
+                .endObject().bytes();
+        ParseContext.Document doc = docMapper.parse(json).rootDoc();
+        assertEquals(doc.getFields("author.ref").length, 1);
+        assertEquals(doc.getFields("author.ref")[0].stringValue(), "John Doe");
+    }
+
 }
