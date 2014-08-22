@@ -98,19 +98,13 @@ public class ReferenceMapper extends AbstractFieldMapper<Object> {
             Mapper contentMapper = null;
             List<Mapper> refMappers = newLinkedList();
             if (!refBuilders.isEmpty()) {
-                ContentPath.Type origPathType = context.path().pathType();
-                context.path().pathType(pathType);
-                context.path().reset();
-                context.path().add(name);
                 contentMapper = contentBuilder.build(context);
                 for (Mapper.Builder refBuilder : refBuilders) {
-                    refMappers.add(refBuilder.build(context));
+                    RefContext refContext = new RefContext(context);
+                    refMappers.add(refBuilder.build(refContext));
                 }
-                context.path().pathType(origPathType);
             } else {
-                context.path().add(name);
                 contentMapper = contentBuilder.build(context);
-                context.path().remove();
             }
             return new ReferenceMapper(buildNames(context), pathType,
                     multiFieldsBuilder.build(this, context), copyTo,
@@ -121,6 +115,17 @@ public class ReferenceMapper extends AbstractFieldMapper<Object> {
                     refType,
                     refFields);
         }
+    }
+
+    /**
+     * A builder context that resets the content path temporarily for the reference mapper
+     */
+    public static class RefContext extends BuilderContext {
+
+        public RefContext(BuilderContext builderContext) {
+            super(builderContext.indexSettings(), new ContentPath());
+        }
+
     }
 
     @SuppressWarnings({"unchecked","rawtypes"})
@@ -334,9 +339,15 @@ public class ReferenceMapper extends AbstractFieldMapper<Object> {
         builder.startObject(name());
         builder.field("type", REF);
         builder.field("path", pathType.name().toLowerCase());
-        builder.field("ref_index", index);
-        builder.field("ref_type", type);
-        builder.field("ref_fields", fields);
+        if (index != null) {
+            builder.field("ref_index", index);
+        }
+        if (type != null) {
+            builder.field("ref_type", type);
+        }
+        if (fields != null) {
+            builder.field("ref_fields", fields);
+        }
         builder.startObject("fields");
         contentMapper.toXContent(builder, params);
         for (Mapper refMapper : refMappers) {

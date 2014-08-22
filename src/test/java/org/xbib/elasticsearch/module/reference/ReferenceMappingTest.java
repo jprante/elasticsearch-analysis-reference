@@ -129,25 +129,25 @@ public class ReferenceMappingTest extends Assert {
     @Test
     public void testRefInDoc() throws Exception {
         mapperParser.putTypeParser(ReferenceMapper.REF, new ReferenceMapper.TypeParser(client));
-
         String mapping = copyToStringFromClasspath("/ref-mapping-authorities.json");
         DocumentMapper docMapper = mapperParser.parse(mapping);
         BytesReference json = jsonBuilder().startObject()
                 .field("_id", 1)
                 .field("title", "A title")
-                .startObject("authorID")
-                    .field("ref_id", "1")
-                    .field("ref_index", "authorities")
-                    .field("ref_type", "persons")
-                    .field("ref_fields", "author")
-                .endObject()
+                .field("dc.creator", "A creator")
+                .field("authorID", "1")
+                .field("bib.contributor", "A contributor")
                 .endObject().bytes();
         ParseContext.Document doc = docMapper.parse(json).rootDoc();
         for (IndexableField field : doc.getFields()) {
             logger.info("{} = {}", field.name(), field.stringValue());
         }
-        assertEquals(doc.getFields("dc.creator").length, 1);
-        assertEquals(doc.getFields("dc.creator")[0].stringValue(), "John Doe");
+        assertEquals(doc.getFields("dc.creator").length, 2);
+        assertEquals(doc.getFields("dc.creator")[0].stringValue(), "A creator");
+        assertEquals(doc.getFields("dc.creator")[1].stringValue(), "John Doe");
+        assertEquals(doc.getFields("bib.contributor").length, 2);
+        assertEquals(doc.getFields("bib.contributor")[0].stringValue(), "John Doe");
+        assertEquals(doc.getFields("bib.contributor")[1].stringValue(), "A contributor");
     }
 
     @Test
@@ -183,7 +183,7 @@ public class ReferenceMappingTest extends Assert {
         MappingMetaData md = getMappingsResponse.getMappings().get("books").get("test");
         logger.info("mappings={}", md.getSourceAsMap());
 
-        // search in field 1
+        // search in field 1,
         SearchResponse searchResponse = client.search(new SearchRequest()
                 .indices("books")
                 .types("test")
@@ -195,17 +195,42 @@ public class ReferenceMappingTest extends Assert {
         }
         assertEquals(searchResponse.getHits().getTotalHits(), 1);
 
-        // search in field 2
+        // search in field 1, unreferenced value
         searchResponse = client.search(new SearchRequest()
                 .indices("books")
                 .types("test")
-                .extraSource("{\"query\":{\"match\":{\"dc.contributor\":\"John Doe\"}}}"))
+                .extraSource("{\"query\":{\"match\":{\"dc.creator\":\"A creator\"}}}"))
                 .actionGet();
         logger.info("hits = {}", searchResponse.getHits().getTotalHits());
         for (SearchHit hit : searchResponse.getHits().getHits()) {
             logger.info("{}", hit.getSource());
         }
         assertEquals(searchResponse.getHits().getTotalHits(), 1);
+
+        // search in field 2, referenced value
+        searchResponse = client.search(new SearchRequest()
+                .indices("books")
+                .types("test")
+                .extraSource("{\"query\":{\"match\":{\"bib.contributor\":\"John Doe\"}}}"))
+                .actionGet();
+        logger.info("hits = {}", searchResponse.getHits().getTotalHits());
+        for (SearchHit hit : searchResponse.getHits().getHits()) {
+            logger.info("{}", hit.getSource());
+        }
+        assertEquals(searchResponse.getHits().getTotalHits(), 1);
+
+        // search in field 2, unreferenced value
+        searchResponse = client.search(new SearchRequest()
+                .indices("books")
+                .types("test")
+                .extraSource("{\"query\":{\"match\":{\"bib.contributor\":\"A contributor\"}}}"))
+                .actionGet();
+        logger.info("hits = {}", searchResponse.getHits().getTotalHits());
+        for (SearchHit hit : searchResponse.getHits().getHits()) {
+            logger.info("{}", hit.getSource());
+        }
+        assertEquals(searchResponse.getHits().getTotalHits(), 1);
+
 
     }
 

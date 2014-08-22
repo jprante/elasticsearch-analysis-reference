@@ -15,9 +15,16 @@
                 "ref_fields" : [ "author" ],
                 "fields" : {
                      "dc.creator" : { "type" : "string" },
-                     "dc.contributor" : { "type" : "string" }
+                     "bib.contributor" : { "type" : "string" }
                 }
-             }
+            },
+            "bib" : {
+                "properties" : {
+                    "contributor" : {
+                         "type" : "string"
+                    }
+                }
+            }
         }
     }
 }
