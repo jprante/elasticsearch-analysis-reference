@@ -1,11 +1,20 @@
 package org.xbib.elasticsearch.module.reference;
 
 import org.apache.lucene.analysis.core.KeywordAnalyzer;
+import org.apache.lucene.index.IndexableField;
+import org.elasticsearch.action.admin.indices.mapping.get.GetMappingsRequest;
+import org.elasticsearch.action.admin.indices.mapping.get.GetMappingsResponse;
+import org.elasticsearch.action.search.SearchRequest;
+import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.client.Client;
+import org.elasticsearch.cluster.metadata.MappingMetaData;
 import org.elasticsearch.common.bytes.BytesReference;
 import org.elasticsearch.common.collect.Maps;
+import org.elasticsearch.common.logging.ESLogger;
+import org.elasticsearch.common.logging.ESLoggerFactory;
 import org.elasticsearch.common.settings.ImmutableSettings;
 import org.elasticsearch.common.settings.Settings;
+import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.index.Index;
 import org.elasticsearch.index.analysis.AnalysisService;
 import org.elasticsearch.index.analysis.AnalyzerProviderFactory;
@@ -16,10 +25,14 @@ import org.elasticsearch.index.codec.postingsformat.PostingsFormatService;
 import org.elasticsearch.index.mapper.DocumentMapper;
 import org.elasticsearch.index.mapper.DocumentMapperParser;
 import org.elasticsearch.index.mapper.ParseContext;
+import org.elasticsearch.index.query.FilterBuilders;
+import org.elasticsearch.index.query.QueryBuilder;
+import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.index.similarity.SimilarityLookupService;
 
 import org.elasticsearch.node.Node;
 import org.elasticsearch.node.NodeBuilder;
+import org.elasticsearch.search.SearchHit;
 import org.testng.Assert;
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.BeforeClass;
@@ -33,6 +46,8 @@ import static org.elasticsearch.common.io.Streams.copyToStringFromClasspath;
 import static org.elasticsearch.common.xcontent.XContentFactory.jsonBuilder;
 
 public class ReferenceMappingTest extends Assert {
+
+    private final static ESLogger logger = ESLoggerFactory.getLogger(ReferenceMappingTest.class.getName());
 
     private DocumentMapperParser mapperParser;
 
@@ -56,7 +71,7 @@ public class ReferenceMappingTest extends Assert {
         client.prepareIndex("test", "test", "1234").setSource(json).execute().actionGet();
 
         json = jsonBuilder().startObject().field("author", "John Doe").endObject().bytes();
-        client.prepareIndex("test", "authorities", "1").setSource(json).execute().actionGet();
+        client.prepareIndex("authorities", "persons", "1").setSource(json).execute().actionGet();
 
         Index index = new Index("test");
         Map<String, AnalyzerProviderFactory> analyzerFactoryFactories = Maps.newHashMap();
@@ -80,16 +95,14 @@ public class ReferenceMappingTest extends Assert {
 
     @Test
     public void testRefMappings() throws Exception {
-        Settings indexSettings = ImmutableSettings.settingsBuilder()
-                .put("ref_index", "test")
-                .put("ref_type", "test")
-                .put("ref_fields", "myfield").build();
-        mapperParser.putTypeParser(ReferenceMapper.CONTENT_TYPE,
-                new ReferenceMapper.TypeParser(client, indexSettings));
+        mapperParser.putTypeParser(ReferenceMapper.REF, new ReferenceMapper.TypeParser(client));
 
         String mapping = copyToStringFromClasspath("/ref-mapping.json");
         DocumentMapper docMapper = mapperParser.parse(mapping);
-        BytesReference json = jsonBuilder().startObject().field("_id", 1).field("someField", "1234").endObject().bytes();
+        BytesReference json = jsonBuilder().startObject()
+                .field("_id", 1)
+                .field("someField", "1234")
+                .endObject().bytes();
         ParseContext.Document doc = docMapper.parse(json).rootDoc();
         assertNotNull(doc);
         assertNotNull(docMapper.mappers().smartName("someField"));
@@ -99,7 +112,7 @@ public class ReferenceMappingTest extends Assert {
         assertEquals(doc.getFields("someField.ref")[1].stringValue(), "b");
         assertEquals(doc.getFields("someField.ref")[2].stringValue(), "c");
 
-        // re-parse it
+        // re-parse from mapping
         String builtMapping = docMapper.mappingSource().string();
         docMapper = mapperParser.parse(builtMapping);
 
@@ -115,47 +128,85 @@ public class ReferenceMappingTest extends Assert {
 
     @Test
     public void testRefInDoc() throws Exception {
-        Settings indexSettings = ImmutableSettings.EMPTY;
-        mapperParser.putTypeParser(ReferenceMapper.CONTENT_TYPE,
-                new ReferenceMapper.TypeParser(client, indexSettings));
+        mapperParser.putTypeParser(ReferenceMapper.REF, new ReferenceMapper.TypeParser(client));
 
         String mapping = copyToStringFromClasspath("/ref-mapping-authorities.json");
         DocumentMapper docMapper = mapperParser.parse(mapping);
         BytesReference json = jsonBuilder().startObject()
                 .field("_id", 1)
                 .field("title", "A title")
-                .startObject("author")
-                    .field("index", "test")
-                    .field("type", "authorities")
-                    .field("id", "1")
-                   .field("fields", "author")
+                .startObject("authorID")
+                    .field("ref_id", "1")
+                    .field("ref_index", "authorities")
+                    .field("ref_type", "persons")
+                    .field("ref_fields", "author")
                 .endObject()
                 .endObject().bytes();
         ParseContext.Document doc = docMapper.parse(json).rootDoc();
-        assertEquals(doc.getFields("author.ref").length, 1);
-        assertEquals(doc.getFields("author.ref")[0].stringValue(), "John Doe");
+        for (IndexableField field : doc.getFields()) {
+            logger.info("{} = {}", field.name(), field.stringValue());
+        }
+        assertEquals(doc.getFields("dc.creator").length, 1);
+        assertEquals(doc.getFields("dc.creator")[0].stringValue(), "John Doe");
     }
 
     @Test
     public void testRefFromID() throws Exception {
-        Settings indexSettings = ImmutableSettings.settingsBuilder()
-                .put("ref_index", "test")
-                .put("ref_type", "authorities")
-                .put("ref_fields", "author").build();
-        mapperParser.putTypeParser(ReferenceMapper.CONTENT_TYPE,
-                new ReferenceMapper.TypeParser(client, indexSettings));
-
-        System.err.println("testRefFromID");
+        mapperParser.putTypeParser(ReferenceMapper.REF, new ReferenceMapper.TypeParser(client));
         String mapping = copyToStringFromClasspath("/ref-mapping-from-id.json");
         DocumentMapper docMapper = mapperParser.parse(mapping);
         BytesReference json = jsonBuilder().startObject()
                 .field("_id", 1)
                 .field("title", "A title")
-                .field("author", "1")
+                .field("authorID", "1")
                 .endObject().bytes();
         ParseContext.Document doc = docMapper.parse(json).rootDoc();
-        assertEquals(doc.getFields("author.ref").length, 1);
-        assertEquals(doc.getFields("author.ref")[0].stringValue(), "John Doe");
+        assertEquals(doc.getFields("ref").length, 1);
+        assertEquals(doc.getFields("ref")[0].stringValue(), "John Doe");
+    }
+
+    @Test
+    public void testSearch() throws Exception {
+        String json = copyToStringFromClasspath("/ref-doc-book.json");
+        String mapping = copyToStringFromClasspath("/ref-mapping-books-test.json");
+        client.admin().indices().prepareCreate("books")
+                .setIndex("books")
+                .addMapping("test", mapping)
+                .execute().actionGet();
+        client.prepareIndex("books", "test", "1").setSource(json).setRefresh(true).execute().actionGet();
+
+        // get mappings
+        GetMappingsResponse getMappingsResponse= client.admin().indices().getMappings(new GetMappingsRequest()
+                .indices("books")
+                .types("test"))
+                .actionGet();
+        MappingMetaData md = getMappingsResponse.getMappings().get("books").get("test");
+        logger.info("mappings={}", md.getSourceAsMap());
+
+        // search in field 1
+        SearchResponse searchResponse = client.search(new SearchRequest()
+                .indices("books")
+                .types("test")
+                .extraSource("{\"query\":{\"match\":{\"dc.creator\":\"John Doe\"}}}"))
+                .actionGet();
+        logger.info("hits = {}", searchResponse.getHits().getTotalHits());
+        for (SearchHit hit : searchResponse.getHits().getHits()) {
+            logger.info("{}", hit.getSource());
+        }
+        assertEquals(searchResponse.getHits().getTotalHits(), 1);
+
+        // search in field 2
+        searchResponse = client.search(new SearchRequest()
+                .indices("books")
+                .types("test")
+                .extraSource("{\"query\":{\"match\":{\"dc.contributor\":\"John Doe\"}}}"))
+                .actionGet();
+        logger.info("hits = {}", searchResponse.getHits().getTotalHits());
+        for (SearchHit hit : searchResponse.getHits().getHits()) {
+            logger.info("{}", hit.getSource());
+        }
+        assertEquals(searchResponse.getHits().getTotalHits(), 1);
+
     }
 
 }

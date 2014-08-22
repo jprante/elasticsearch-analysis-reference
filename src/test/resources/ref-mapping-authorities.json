@@ -1,8 +1,22 @@
 {
     "docs" : {
         "properties" : {
-            "author": {
-                "type" : "ref"
+            "dc" : {
+                "properties" : {
+                    "creator" : {
+                         "type" : "string"
+                    }
+                }
+            },
+            "authorID": {
+                "type" : "ref",
+                "ref_index" : "authorities",
+                "ref_type" : "persons",
+                "ref_fields" : [ "author" ],
+                "fields" : {
+                     "dc.creator" : { "type" : "string" },
+                     "dc.contributor" : { "type" : "string" }
+                }
              }
         }
     }
