@@ -30,14 +30,13 @@ to lookup the included document content afterwards.
 
 | Elasticsearch  | Plugin       | Release date |
 | -------------- | ------------ | ------------ |
-| 1.3.2          | 1.3.0.2      | Aug 23, 2014 |
-| 1.3.2          | 1.3.0.1      | Aug 22, 2014 |
+| 1.3.2          | 1.3.0.3      | Aug 24, 2014 |
 | 1.3.1          | 1.3.0.0      | Aug  5, 2014 |
 | 1.2.1          | 1.2.1.0      | Jul  1, 2014 |
 
 ## Installation
 
-    ./bin/plugin -install analysis-reference -url http://xbib.org/repository/org/xbib/elasticsearch/plugin/elasticsearch-analysis-reference/1.3.0.2/elasticsearch-analysis-reference-1.3.0.2-plugin.zip
+    ./bin/plugin -install analysis-reference -url http://xbib.org/repository/org/xbib/elasticsearch/plugin/elasticsearch-analysis-reference/1.3.0.3/elasticsearch-analysis-reference-1.3.0.3-plugin.zip
 
 Do not forget to restart the node after installing.
 
@@ -45,8 +44,7 @@ Do not forget to restart the node after installing.
 
 | File                                                  | SHA1                                     |
 | ----------------------------------------------------- | -----------------------------------------|
-| elasticsearch-analysis-reference-1.3.0.2-plugin.zip   | c8be5e27e5175607d2c22ba2e6850e0f1a1e927d |
-| elasticsearch-analysis-reference-1.3.0.1-plugin.zip   | 5ef083760c13b31c0335f15574d865ecd7d7c827 |
+| elasticsearch-analysis-reference-1.3.0.3-plugin.zip   | 526a0c69c4fc7e64b85c69f55310303c8f758e0b |
 | elasticsearch-analysis-reference-1.3.0.0-plugin.zip   | 1151801eb4de2ecb8d6dcae41a999c8b6b0a6579 |
 | elasticsearch-analysis-reference-1.2.1.0-plugin.zip   | 1bdaf7d1b0cc8c8a08e1b5487ab39d351c9365d7 |
 

@@ -284,25 +284,30 @@ public class ReferenceMapper extends AbstractFieldMapper<Object> {
         context.externalValue(content);
         contentMapper.parse(context);
         if (index != null && type != null && fields != null) {
-            // get document from other index
-            GetResponse response = client.prepareGet()
-                    .setIndex(index)
-                    .setType(type)
-                    .setId(content)
-                    .setFields(fields)
-                    .execute().actionGet();
-            if (response != null) {
-                for (String field : fields) {
-                    GetField getField = response.getField(field);
-                    if (getField != null) {
-                        for (Object object : getField.getValues()) {
-                            for (Mapper refMapper : refMappers) {
-                                context.externalValue(object);
-                                refMapper.parse(context);
+            // get document from other index. If an exception occurs, ignore silently
+            try {
+                GetResponse response = client.prepareGet()
+                        .setIndex(index)
+                        .setType(type)
+                        .setId(content)
+                        .setFields(fields)
+                        .execute()
+                        .actionGet();
+                if (response != null && response.isExists()) {
+                    for (String field : fields) {
+                        GetField getField = response.getField(field);
+                        if (getField != null) {
+                            for (Object object : getField.getValues()) {
+                                for (Mapper refMapper : refMappers) {
+                                    context.externalValue(object);
+                                    refMapper.parse(context);
+                                }
                             }
                         }
                     }
                 }
+            } catch (Exception e) {
+                // ignore
             }
         }
     }
