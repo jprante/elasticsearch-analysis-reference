@@ -1,12 +1,13 @@
 # Elasticsearch Analysis Reference Plugin
 
 This plugin for [Elasticsearch](http://github.com/elasticsearch/elasticsearch) uses
-a reference mechanism for including content from other documents in the cluster during
-the analysis field mapping phase.
+a reference mechanism for indexing content from other documents. The lookup takes place during
+the analysis field mapping phase and does not change the source document.
 
-This process is also known as denormalization.
+For example, if you have two indexes whre you want to link from one index to another by using
+document IDs, you can use this plugin to reference the content behind the ID.
 
-Denormalization can be defined as the copying of the same data into multiple documents 
+This process is also known as denormalization. Denormalization can be defined as the copying of the same data into multiple documents 
 in order to simplify query processing or to fit the user’s data into a particular data model.
 
 See the example below how to create a library catalog entry for the book "Goethe's Faust" and
@@ -58,19 +59,25 @@ All feedback is welcome! If you find issues, please post them at [Github](https:
 
 # Documentation
 
-This plugin introduces a new mapping field type named `ref`. If a field with name `fieldname` 
-is of type `ref`, the values in a document must contain a coordinate of the form
+This plugin introduces a new mapping field type named `ref`. 
+
+If a field with name `fieldname` is of type `ref`, the values in a document must contain a coordinate of the form
 
     "fieldname" : {
-        "index" : ...
-        "type" : ...
-        "id" : ...
-        "fields" : ...
+        "ref_index" : ...
+        "ref_type" : ...
+        "ref_id" : ...
+        "ref_fields" : ...
+        "fields" : {
+           "my_field_1" : { ... },
+           "my_field_2" : { ... }
+        }
     }
     
-where `index/type/id` is the coordinate of a document in the ELasticsearch cluster, and `fields` denotes
-one or more fields from where the values are fetched. If there is more than one value, all values are
-appended into an array (multivalued field).
+where `ref_index`, `ref_type`, `ref_id`, `ref_fields` is the coordinate of field content in the cluster, 
+and `fields` denotes the index fields where one or more fields from where the values are indexed into. 
+
+If there is more than one value, all values are appended into an array (multivalued field).
 
 If the coordinate does not point to a valid document, the analyzer does not bail out with failure, 
 but the referencing is skipped.
