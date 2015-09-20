@@ -1,5 +1,8 @@
 [![0](https://upload.wikimedia.org/wikipedia/commons/thumb/a/a3/SanDiegoCityCollegeLearningResource_-_bookshelf.jpg/320px-SanDiegoCityCollegeLearningResource_-_bookshelf.jpg)](https://upload.wikimedia.org/wikipedia/commons/thumb/a/a3/SanDiegoCityCollegeLearningResource_-_bookshelf.jpg/320px-SanDiegoCityCollegeLearningResource_-_bookshelf.jpg)
 
+Image taken from Wikipedia https://commons.wikimedia.org/wiki/File:SanDiegoCityCollegeLearningResource_-_bookshelf.jpg
+licensed under the Creative Commons Attribution 2.0 Generic license.
+
 # Reference plugin for Elasticsearch
 
 This plugin for [Elasticsearch](http://github.com/elasticsearch/elasticsearch) uses
@@ -85,6 +88,8 @@ but the referencing is skipped.
 
 ![Goethe](https://upload.wikimedia.org/wikipedia/commons/thumb/0/0e/Goethe_%28Stieler_1828%29.jpg/195px-Goethe_%28Stieler_1828%29.jpg)
 
+Image taken from Wikipedia https://commons.wikimedia.org/wiki/File:Goethe_(Stieler_1828).jpg
+
      curl -XDELETE 'localhost:9200/test'
      
      curl -XPUT 'localhost:9200/test'
@@ -120,7 +125,6 @@ but the referencing is skipped.
      '
      
      curl -XGET 'localhost:9200/test/books/_mapping?pretty'
-     
      
      # http://d-nb.info/gnd/118540238
      
