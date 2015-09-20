@@ -83,7 +83,7 @@ but the referencing is skipped.
 
 # Example: Goethe's many names
 
-[!](https://upload.wikimedia.org/wikipedia/commons/thumb/0/0e/Goethe_%28Stieler_1828%29.jpg/195px-Goethe_%28Stieler_1828%29.jpg)
+![Goethe](https://upload.wikimedia.org/wikipedia/commons/thumb/0/0e/Goethe_%28Stieler_1828%29.jpg/195px-Goethe_%28Stieler_1828%29.jpg)
 
      curl -XDELETE 'localhost:9200/test'
      
