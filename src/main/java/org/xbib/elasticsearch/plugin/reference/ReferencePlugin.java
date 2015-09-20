@@ -1,31 +1,39 @@
 package org.xbib.elasticsearch.plugin.reference;
 
+import org.elasticsearch.common.inject.Inject;
 import org.elasticsearch.common.inject.Module;
-import org.elasticsearch.plugins.AbstractPlugin;
+import org.elasticsearch.common.settings.Settings;
+import org.elasticsearch.plugins.Plugin;
 import org.xbib.elasticsearch.module.reference.ReferenceModule;
 
+import java.util.ArrayList;
 import java.util.Collection;
 
-import static org.elasticsearch.common.collect.Lists.newArrayList;
+public class ReferencePlugin extends Plugin {
 
-public class ReferencePlugin extends AbstractPlugin {
+    private final Settings settings;
+
+    @Inject
+    public ReferencePlugin(Settings settings) {
+        this.settings = settings;
+    }
 
     @Override
     public String name() {
-        return "analysis-reference-"
-                + Build.getInstance().getVersion() + "-"
-                + Build.getInstance().getShortHash();
+        return "reference";
     }
 
     @Override
     public String description() {
-        return "Analysis reference plugin";
+        return "Reference plugin for Elasticsearch";
     }
 
     @Override
-    public Collection<Class<? extends Module>> indexModules() {
-        Collection<Class<? extends Module>> modules = newArrayList();
-        modules.add(ReferenceModule.class);
+    public Collection<Module> indexModules(Settings indexSettings) {
+        Collection<Module> modules = new ArrayList<>();
+        if (settings.getAsBoolean("plugins.reference.enabled", true)) {
+            modules.add(new ReferenceModule());
+        }
         return modules;
     }
 

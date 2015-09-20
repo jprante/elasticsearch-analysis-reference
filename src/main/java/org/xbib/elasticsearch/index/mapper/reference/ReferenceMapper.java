@@ -1,49 +1,76 @@
 package org.xbib.elasticsearch.index.mapper.reference;
 
 import org.apache.lucene.document.Field;
-import org.apache.lucene.document.FieldType;
+import org.apache.lucene.index.IndexOptions;
 import org.elasticsearch.action.get.GetResponse;
 import org.elasticsearch.client.Client;
 import org.elasticsearch.common.logging.ESLogger;
 import org.elasticsearch.common.logging.ESLoggerFactory;
-import org.elasticsearch.common.settings.ImmutableSettings;
+import org.elasticsearch.common.settings.Settings;
+import org.elasticsearch.common.util.CollectionUtils;
 import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.common.xcontent.XContentParser;
-import org.elasticsearch.index.fielddata.FieldDataType;
 import org.elasticsearch.index.get.GetField;
 import org.elasticsearch.index.mapper.ContentPath;
-import org.elasticsearch.index.mapper.FieldMapperListener;
+import org.elasticsearch.index.mapper.FieldMapper;
+import org.elasticsearch.index.mapper.MappedFieldType;
 import org.elasticsearch.index.mapper.Mapper;
 import org.elasticsearch.index.mapper.MapperParsingException;
-import org.elasticsearch.index.mapper.MergeContext;
 import org.elasticsearch.index.mapper.MergeMappingException;
-import org.elasticsearch.index.mapper.ObjectMapperListener;
+import org.elasticsearch.index.mapper.MergeResult;
 import org.elasticsearch.index.mapper.ParseContext;
-import org.elasticsearch.index.mapper.core.AbstractFieldMapper;
 
 import java.io.IOException;
+import java.util.Collections;
+import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
-import static org.elasticsearch.common.collect.Lists.newLinkedList;
 import static org.elasticsearch.index.mapper.MapperBuilders.stringField;
-import static org.elasticsearch.index.mapper.core.TypeParsers.parseMultiField;
-import static org.elasticsearch.index.mapper.core.TypeParsers.parsePathType;
 
-public class ReferenceMapper extends AbstractFieldMapper<Object> {
+public class ReferenceMapper extends FieldMapper {
 
-    private final static ESLogger logger = ESLoggerFactory.getLogger("","reference");
+    private final static ESLogger logger = ESLoggerFactory.getLogger("", "reference");
 
-    public static final String REF = "ref";
+    public static final String CONTENT_TYPE = "ref";
+
+    public static final class Defaults {
+        public static final ReferenceFieldType FIELD_TYPE = new ReferenceFieldType();
+        static {
+            FIELD_TYPE.freeze();
+        }
+    }
+
+    public static final class ReferenceFieldType extends MappedFieldType {
+
+        public ReferenceFieldType() {
+        }
+
+        protected ReferenceFieldType(ReferenceMapper.ReferenceFieldType ref) {
+            super(ref);
+        }
+
+        public ReferenceMapper.ReferenceFieldType clone() {
+            return new ReferenceMapper.ReferenceFieldType(this);
+        }
+
+        @Override
+        public String typeName() {
+            return CONTENT_TYPE;
+        }
+
+        public String value(Object value) {
+            return value == null ? null : value.toString();
+        }
+    }
 
     @SuppressWarnings({"rawtypes"})
-    public static class Builder extends AbstractFieldMapper.Builder<Builder, ReferenceMapper> {
+    public static class Builder extends FieldMapper.Builder<Builder, ReferenceMapper> {
 
-        private ContentPath.Type pathType = Defaults.PATH_TYPE;
+        private FieldMapper.Builder contentBuilder;
 
-        private Mapper.Builder contentBuilder;
-
-        private List<Mapper.Builder> refBuilders;
+        private List<FieldMapper.Builder> refBuilders;
 
         private Client client;
 
@@ -51,28 +78,14 @@ public class ReferenceMapper extends AbstractFieldMapper<Object> {
 
         private String refType;
 
-        private String[] refFields;
+        private List<String> refFields;
 
         public Builder(String name, Client client) {
-            super(name, new FieldType(AbstractFieldMapper.Defaults.FIELD_TYPE));
-            this.contentBuilder = stringField(name);
-            this.refBuilders = newLinkedList();
+            super(name, new ReferenceFieldType());
             this.client = client;
-        }
-
-        public Builder pathType(ContentPath.Type pathType) {
-            this.pathType = pathType;
-            return this;
-        }
-
-        public Builder content(Mapper.Builder content) {
-            this.contentBuilder = content;
-            return this;
-        }
-
-        public Builder ref(Mapper.Builder ref) {
-            this.refBuilders.add(ref);
-            return this;
+            this.refBuilders = new LinkedList<>();
+            this.refFields = new LinkedList<>();
+            this.contentBuilder = stringField(name).store(true);
         }
 
         public Builder refIndex(String refIndex) {
@@ -85,54 +98,66 @@ public class ReferenceMapper extends AbstractFieldMapper<Object> {
             return this;
         }
 
+        public Builder refMapper(FieldMapper.Builder ref) {
+            this.refBuilders.add(ref);
+            return this;
+        }
+
+        @SuppressWarnings("unchecked")
         public Builder refFields(Object refFields) {
             if (refFields instanceof List) {
-                List l =  (List)refFields;
-                this.refFields = (String[])l.toArray(new String[l.size()]);
-            } else if (refFields instanceof String[]) {
-                this.refFields = (String[])refFields;
-            } else {
-                this.refFields = new String[] { refFields.toString() };
+                this.refFields = (List<String>)refFields;
+            } else if (refFields != null) {
+                this.refFields = Collections.singletonList(refFields.toString());
             }
             return this;
         }
 
         @Override
         public ReferenceMapper build(BuilderContext context) {
-            Mapper contentMapper = null;
-            List<Mapper> refMappers = newLinkedList();
+            FieldMapper contentMapper = (FieldMapper) contentBuilder.build(context);
+            List<FieldMapper> refMappers = new LinkedList<>();
             if (!refBuilders.isEmpty()) {
-                contentMapper = contentBuilder.build(context);
                 for (Mapper.Builder refBuilder : refBuilders) {
-                    RefContext refContext = new RefContext(context);
-                    refMappers.add(refBuilder.build(refContext));
+                    RefContext refContext = new RefContext(context.indexSettings());
+                    refMappers.add((FieldMapper) refBuilder.build(refContext));
                 }
-            } else {
-                contentMapper = contentBuilder.build(context);
             }
-            return new ReferenceMapper(buildNames(context), pathType,
-                    multiFieldsBuilder.build(this, context), copyTo,
-                    contentMapper,
-                    refMappers,
+            MappedFieldType defaultFieldType = Defaults.FIELD_TYPE.clone();
+            if (this.fieldType.indexOptions() != IndexOptions.NONE && !this.fieldType.tokenized()) {
+                defaultFieldType.setOmitNorms(true);
+                defaultFieldType.setIndexOptions(IndexOptions.DOCS);
+                if (!this.omitNormsSet && this.fieldType.boost() == 1.0F) {
+                    this.fieldType.setOmitNorms(true);
+                }
+                if (!this.indexOptionsSet) {
+                    this.fieldType.setIndexOptions(IndexOptions.DOCS);
+                }
+            }
+            defaultFieldType.freeze();
+            this.setupFieldType(context);
+            return new ReferenceMapper(name,
+                    this.fieldType,
+                    defaultFieldType,
                     client,
                     refIndex,
                     refType,
-                    refFields);
+                    refFields,
+                    contentMapper,
+                    refMappers,
+                    context.indexSettings(),
+                    multiFieldsBuilder.build(this, context),
+                    copyTo);
         }
     }
 
-    /**
-     * A builder context that resets the content path temporarily for the reference mapper
-     */
     public static class RefContext extends BuilderContext {
 
-        public RefContext(BuilderContext builderContext) {
-            super(builderContext.indexSettings(), new ContentPath());
+        public RefContext(Settings settings) {
+            super(settings, new ContentPath());
         }
-
     }
 
-    @SuppressWarnings({"unchecked","rawtypes"})
     public static class TypeParser implements Mapper.TypeParser {
 
         private final Client client;
@@ -141,51 +166,36 @@ public class ReferenceMapper extends AbstractFieldMapper<Object> {
             this.client = client;
         }
 
-        private Mapper.Builder<?, ?> findMapperBuilder(Map<String, Object> propNode, String propName, ParserContext parserContext) {
-            String type;
-            Object typeNode = propNode.get("type");
-            if (typeNode != null) {
-                type = typeNode.toString();
-            } else {
-                type = "string";
-            }
-            Mapper.TypeParser typeParser = parserContext.typeParser(type);
-            return typeParser.parse(propName, propNode, parserContext);
-        }
-
         @Override
+        @SuppressWarnings({"unchecked","rawtypes"})
         public Mapper.Builder parse(String name, Map<String, Object> node, ParserContext parserContext)
                 throws MapperParsingException {
             ReferenceMapper.Builder builder = new Builder(name, client);
-            for (Map.Entry<String, Object> entry : node.entrySet()) {
+            Iterator<Map.Entry<String, Object>> iterator = node.entrySet().iterator();
+            while (iterator.hasNext()) {
+                Map.Entry<String, Object> entry = iterator.next();
                 String fieldName = entry.getKey();
                 Object fieldNode = entry.getValue();
                 switch (fieldName) {
-                    case "path":
-                        builder.pathType(parsePathType(name, fieldNode.toString()));
-                        break;
-                    case "fields":
-                        Map<String, Object> fieldsNode = (Map<String, Object>) fieldNode;
-                        for (Map.Entry<String, Object> entry1 : fieldsNode.entrySet()) {
-                            String propName = entry1.getKey();
-                            Map<String, Object> propNode = (Map<String, Object>) entry1.getValue();
-                            Mapper.Builder<?, ?> mapperBuilder = findMapperBuilder(propNode, propName, parserContext);
-                            parseMultiField((AbstractFieldMapper.Builder) mapperBuilder, fieldName, (Map<String, Object>) fieldNode, parserContext, propName, propNode);
-                            if (propName.equals(name)) {
-                                builder.content(mapperBuilder);
-                            } else {
-                                builder.ref(mapperBuilder);
-                            }
-                        }
-                        break;
                     case "ref_index":
                         builder.refIndex(fieldNode.toString());
+                        iterator.remove();
                         break;
                     case "ref_type":
                         builder.refType(fieldNode.toString());
+                        iterator.remove();
                         break;
                     case "ref_fields":
                         builder.refFields(entry.getValue());
+                        iterator.remove();
+                        break;
+                    case "to":
+                        List<String> toNames = (List<String>)fieldNode;
+                        for (String toName : toNames) {
+                            FieldMapper.Builder mapperBuilder = stringField(toName);
+                            builder.refMapper(mapperBuilder);
+                        }
+                        iterator.remove();
                         break;
                 }
             }
@@ -193,11 +203,7 @@ public class ReferenceMapper extends AbstractFieldMapper<Object> {
         }
     }
 
-    private final ContentPath.Type pathType;
-
-    private final Mapper contentMapper;
-
-    private final List<Mapper> refMappers;
+    private final Settings settings;
 
     private final Client client;
 
@@ -205,97 +211,105 @@ public class ReferenceMapper extends AbstractFieldMapper<Object> {
 
     private String type;
 
-    private String[] fields;
+    private List<String> fields;
 
-    public ReferenceMapper(Names names, ContentPath.Type pathType,
-                           MultiFields multiFields, CopyTo copyTo,
-                           Mapper contentMapper,
-                           List<Mapper> refMappers,
+    private FieldMapper contentMapper;
+
+    private List<FieldMapper> mappers;
+
+    public ReferenceMapper(String simpleName,
+                           MappedFieldType fieldType,
+                           MappedFieldType defaultFieldType,
                            Client client,
-                           String index,
-                           String type,
-                           String[] fields) {
-        super(names, 1.0f, Defaults.FIELD_TYPE, false, null, null, null, null, null, null, null,
-                ImmutableSettings.EMPTY, multiFields, copyTo);
-        this.pathType = pathType;
-        this.contentMapper = contentMapper;
-        this.refMappers = refMappers;
+                           String refindex,
+                           String reftype,
+                           List<String> reffields,
+                           FieldMapper contentMapper,
+                           List<FieldMapper> refmappers,
+                           Settings indexSettings,
+                           MultiFields multiFields,
+                           CopyTo copyTo) {
+        super(simpleName, fieldType, defaultFieldType, indexSettings, multiFields, copyTo);
+        this.settings = indexSettings;
         this.client = client;
-        this.index = index;
-        this.type = type;
-        this.fields = fields;
+        this.index = refindex;
+        this.type = reftype;
+        this.fields = reffields;
+        this.contentMapper = contentMapper;
+        this.mappers = refmappers;
     }
 
     @Override
-    public Object value(Object value) {
-        return null;
-    }
-
-    @Override
-    public FieldType defaultFieldType() {
-        return AbstractFieldMapper.Defaults.FIELD_TYPE;
-    }
-
-    @Override
-    public FieldDataType defaultFieldDataType() {
-        return null;
-    }
-
-    @Override
-    public void parse(final ParseContext context) throws IOException {
+    public Mapper parse(ParseContext context) throws IOException {
         String content = null;
         XContentParser parser = context.parser();
         XContentParser.Token token = parser.currentToken();
         if (token == XContentParser.Token.VALUE_STRING) {
             content = parser.text();
         } else {
-            // allow overriding setting in the mapping by a single field
             String currentFieldName = null;
+            fields = new LinkedList<>();
+            mappers = new LinkedList<>();
             while ((token = parser.nextToken()) != XContentParser.Token.END_OBJECT) {
                 if (token == XContentParser.Token.FIELD_NAME) {
                     currentFieldName = parser.currentName();
                 } else if (token == XContentParser.Token.VALUE_STRING) {
-                    switch (currentFieldName) {
-                        case "ref_id":
-                            content = parser.text();
-                            break;
-                        case "ref_index":
-                            index = parser.text();
-                            break;
-                        case "ref_type":
-                            type = parser.text();
-                            break;
-                        case "ref_fields":
-                            fields = new String[]{parser.text()};
-                            break;
-
-                    }
-                } else if (token == XContentParser.Token.START_ARRAY) {
-                    List<String> values = newLinkedList();
-                    while (parser.nextToken() != XContentParser.Token.END_ARRAY) {
-                        if (parser.text() != null) {
-                            values.add(parser.text());
+                    if (currentFieldName != null) {
+                        switch (currentFieldName) {
+                            case "ref_id":
+                                content = parser.text();
+                                break;
+                            case "ref_index":
+                                index = parser.text();
+                                break;
+                            case "ref_type":
+                                type = parser.text();
+                                break;
+                            case "ref_fields":
+                                fields.add(parser.text());
+                                break;
+                            case "to":
+                                RefContext refContext = new RefContext(settings);
+                                mappers.add(stringField(parser.text()).build(refContext));
+                                break;
                         }
                     }
-                    fields = values.toArray(new String[values.size()]);
+                } else if (token == XContentParser.Token.START_ARRAY) {
+                    if (currentFieldName != null) {
+                        switch (currentFieldName) {
+                            case "ref_fields": {
+                                while (parser.nextToken() != XContentParser.Token.END_ARRAY) {
+                                    if (parser.text() != null) {
+                                        fields.add(parser.text());
+                                    }
+                                }
+                                break;
+                            }
+                            case "to": {
+                                while (parser.nextToken() != XContentParser.Token.END_ARRAY) {
+                                    if (parser.text() != null) {
+                                        RefContext refContext = new RefContext(settings);
+                                        mappers.add(stringField(parser.text()).build(refContext));
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }
         if (content == null) {
-            // do not throw exception - silently ignore
-            return;
+            return null;
         }
-        context.externalValue(content);
+        context = context.createExternalValueContext(content);
         contentMapper.parse(context);
-        // client may be null at recovery time. In this case, we skip the referencing.
         if (client != null && index != null && type != null && fields != null) {
-            // get document from other index. If an exception occurs, ignore silently
             try {
                 GetResponse response = client.prepareGet()
                         .setIndex(index)
                         .setType(type)
                         .setId(content)
-                        .setFields(fields)
+                        .setFields(fields.toArray(new String[fields.size()]))
                         .execute()
                         .actionGet();
                 if (response != null && response.isExists()) {
@@ -303,54 +317,46 @@ public class ReferenceMapper extends AbstractFieldMapper<Object> {
                         GetField getField = response.getField(field);
                         if (getField != null) {
                             for (Object object : getField.getValues()) {
-                                for (Mapper refMapper : refMappers) {
-                                    context.externalValue(object);
-                                    refMapper.parse(context);
+                                for (FieldMapper mapper : mappers) {
+                                    context = context.createExternalValueContext(object);
+                                    mapper.parse(context);
                                 }
                             }
                         }
                     }
                 } else {
-                    logger.debug("does not exist: {}/{}/{}", index, type, content);
+                    logger.warn("ref doc does not exist: {}/{}/{}", index, type, content);
                 }
             } catch (Exception e) {
-               logger.debug(e.getMessage());
+                logger.error("error while getting ref doc {}/{}/{}: {}", index, type, content, e.getMessage());
             }
         }
+        return null;
     }
+
     @Override
     protected void parseCreateField(ParseContext parseContext, List<Field> fields) throws IOException {
-
-    }
-    @Override
-    public void merge(Mapper mergeWith, MergeContext mergeContext) throws MergeMappingException {
+        // override
     }
 
     @Override
-    public void traverse(FieldMapperListener fieldMapperListener) {
-        contentMapper.traverse(fieldMapperListener);
-        for (Mapper refMapper : refMappers) {
-            refMapper.traverse(fieldMapperListener);
-        }
+    public void merge(Mapper mergeWith, MergeResult mergeResult) throws MergeMappingException {
+        // ignore this for now
     }
 
     @Override
-    public void traverse(ObjectMapperListener objectMapperListener) {
-    }
-
-    @Override
-    public void close() {
-        contentMapper.close();
-        for (Mapper refMapper : refMappers) {
-            refMapper.close();
-        }
+    @SuppressWarnings("unchecked")
+    public Iterator<Mapper> iterator() {
+        List<FieldMapper> extras = new LinkedList<>();
+        extras.addAll(mappers);
+        return CollectionUtils.concat(super.iterator(), extras.iterator());
     }
 
     @Override
     public XContentBuilder toXContent(XContentBuilder builder, Params params) throws IOException {
-        builder.startObject(name());
-        builder.field("type", REF);
-        builder.field("path", pathType.name().toLowerCase());
+        // important: use simple name
+        builder.startObject(simpleName());
+        builder.field("type", CONTENT_TYPE);
         if (index != null) {
             builder.field("ref_index", index);
         }
@@ -360,21 +366,18 @@ public class ReferenceMapper extends AbstractFieldMapper<Object> {
         if (fields != null) {
             builder.field("ref_fields", fields);
         }
-        builder.startObject("fields");
-        contentMapper.toXContent(builder, params);
-        for (Mapper refMapper : refMappers) {
-            refMapper.toXContent(builder, params);
+        builder.startArray("to");
+        for (Mapper mapper : mappers) {
+            builder.value(mapper.name());
         }
-        multiFields.toXContent(builder, params);
-        builder.endObject();
-        multiFields.toXContent(builder, params);
+        builder.endArray();
         builder.endObject();
         return builder;
     }
 
     @Override
     protected String contentType() {
-        return REF;
+        return CONTENT_TYPE;
     }
 
 }

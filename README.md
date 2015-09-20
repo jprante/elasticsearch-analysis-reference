@@ -1,53 +1,52 @@
-# Elasticsearch Analysis Reference Plugin
+[![0](https://upload.wikimedia.org/wikipedia/commons/thumb/a/a3/SanDiegoCityCollegeLearningResource_-_bookshelf.jpg/320px-SanDiegoCityCollegeLearningResource_-_bookshelf.jpg)](https://upload.wikimedia.org/wikipedia/commons/thumb/a/a3/SanDiegoCityCollegeLearningResource_-_bookshelf.jpg/320px-SanDiegoCityCollegeLearningResource_-_bookshelf.jpg)
+
+# Reference plugin for Elasticsearch
 
 This plugin for [Elasticsearch](http://github.com/elasticsearch/elasticsearch) uses
 a reference mechanism for indexing content from other documents. The lookup takes place during
-the analysis field mapping phase and does not change the source document.
+the indexing (analysis field mapping) phase, not at search time.
 
 For example, if you have two indexes whre you want to link from one index to another by using
 document IDs, you can use this plugin to reference the content behind the ID.
 
-This process is also known as denormalization. Denormalization can be defined as the copying of the same data into multiple documents 
-in order to simplify query processing or to fit the user’s data into a particular data model.
+This process is also known as denormalization. Denormalization in this sense can be defined as 
+the copying of the same data into multiple documents in order to simplify querying.
 
 See the example below how to create a library catalog entry for the book "Goethe's Faust" and
-making it searchable by referencing variant forms of the author's name at indexing time.
+making it searchable by referencing variant forms of the author's name.
 
 The analyzer is capable of fetching content from other fields in other documents because
-Elasticsearch documents have a near-real-time (NRT) read property. The mapping phase of this analyzer
-can safely execute a get request and transfer field values from already indexed documents
-into a new document.
+Elasticsearch documents have a near-real-time (NRT) read property. 
+The mapping phase of this analyzer can safely execute a get request and transfer field 
+values from already indexed documents into a new document.
 
-Since the documents are denormalized, it is required to reindex the whole index when 
-the referenced data source has changed.
+Since the documents are denormalized, it is required to repeat creating the whole index when 
+the referenced data source has changed. This can be expensive and must be balanced against
+the additional query load on a normalized data model.
 
 Note, in a search response, the `_source` field will not reflect the included content 
 because the `_source` field is immutable. It is important for Elasticsearch internal functions 
 that `_source` field value represents exactly what the user pushed over the API into 
-the index. But by following the coordinates of the referred document it is easy 
-to lookup the included document content afterwards.
+the index.
 
-## Versions
+## Compatibility matrix
 
-| Elasticsearch  | Plugin       | Release date |
-| -------------- | ------------ | ------------ |
-| 1.3.2          | 1.3.0.3      | Aug 24, 2014 |
-| 1.3.1          | 1.3.0.0      | Aug  5, 2014 |
-| 1.2.1          | 1.2.1.0      | Jul  1, 2014 |
+| Elasticsearch  | Plugin        | Release date |
+| -------------- | ------------- | ------------ |
+| 2.0.0-beta2    | 2.0.0-beta2.0 | Sep 20, 2015 |
+| 1.3.2          | 1.3.0.3       | Aug 24, 2014 |
+| 1.3.1          | 1.3.0.0       | Aug  5, 2014 |
+| 1.2.1          | 1.2.1.0       | Jul  1, 2014 |
 
-## Installation
+## Installation 1.x
 
     ./bin/plugin -install analysis-reference -url http://xbib.org/repository/org/xbib/elasticsearch/plugin/elasticsearch-analysis-reference/1.3.0.3/elasticsearch-analysis-reference-1.3.0.3-plugin.zip
 
+## Installation 2.x
+
+    ./bin/plugin install http://xbib.org/repository/org/xbib/elasticsearch/plugin/elasticsearch-analysis-reference/2.0.0-beta2.0/elasticsearch-analysis-reference-2.0.0-beta2.0-plugin.zip
+
 Do not forget to restart the node after installing.
-
-## Checksum
-
-| File                                                  | SHA1                                     |
-| ----------------------------------------------------- | -----------------------------------------|
-| elasticsearch-analysis-reference-1.3.0.3-plugin.zip   | 526a0c69c4fc7e64b85c69f55310303c8f758e0b |
-| elasticsearch-analysis-reference-1.3.0.0-plugin.zip   | 1151801eb4de2ecb8d6dcae41a999c8b6b0a6579 |
-| elasticsearch-analysis-reference-1.2.1.0-plugin.zip   | 1bdaf7d1b0cc8c8a08e1b5487ab39d351c9365d7 |
 
 ## Project docs
 
@@ -64,25 +63,27 @@ This plugin introduces a new mapping field type named `ref`.
 If a field with name `fieldname` is of type `ref`, the values in a document must contain a coordinate of the form
 
     "fieldname" : {
+        "type" : "ref",
         "ref_index" : ...
         "ref_type" : ...
-        "ref_id" : ...
         "ref_fields" : ...
-        "fields" : {
-           "my_field_1" : { ... },
-           "my_field_2" : { ... }
-        }
+        "to" : [
+           "my_field_1",
+           "my_field_2"
+        ]
     }
     
-where `ref_index`, `ref_type`, `ref_id`, `ref_fields` is the coordinate of field content in the cluster, 
-and `fields` denotes the index fields where one or more fields from where the values are indexed into. 
+where `ref_index`, `ref_type`, `ref_fields` is the coordinate of field content in the cluster, 
+and `to` denotes the index fields where one or more fields from where the values are indexed into. 
 
 If there is more than one value, all values are appended into an array (multivalued field).
 
 If the coordinate does not point to a valid document, the analyzer does not bail out with failure, 
 but the referencing is skipped.
 
-# Example
+# Example: Goethe's many names
+
+[!](https://upload.wikimedia.org/wikipedia/commons/thumb/0/0e/Goethe_%28Stieler_1828%29.jpg/195px-Goethe_%28Stieler_1828%29.jpg)
 
      curl -XDELETE 'localhost:9200/test'
      
@@ -110,10 +111,7 @@ but the referencing is skipped.
                      "ref_index" : "test",
                      "ref_type" : "authorities",
                      "ref_fields" : [ "variants" ],
-                     "fields" : {
-                         "variant" : {},
-                         "_all" : {}
-                     }
+                     "to" : [ "variant", "_all" ]
                }
              }
            }

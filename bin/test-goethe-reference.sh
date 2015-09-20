@@ -21,14 +21,24 @@ curl -XPOST 'localhost:9200/test/books/_mapping' -d '
       "title" : { "type" : "string" },
       "author" : {
         "properties" : {
-          "preferredName" : { "type" : "string" },
-          "variantName" : { "type" : "ref" }
+          "preferredName" : {
+             "type" : "string"
+          },
+          "variantName" : {
+            "type" : "ref",
+            "ref_index" : "test",
+            "ref_type" : "authorities",
+            "ref_fields" : "variants",
+            "to" : [ "name" ]
+          }
         }
       }
     }
   } 
 }
 '
+
+# Goethe's many names
 
 # http://d-nb.info/gnd/118540238
 
@@ -125,12 +135,7 @@ curl -XPUT 'localhost:9200/test/books/1' -d '
   "title" : "Faust",
   "author" : {
       "preferredName" : "Johann Wolfgang Goethe",
-      "variantName" : {
-          "index" : "test",
-          "type" : "authorities",
-          "id" : "Johann Wolfgang Goethe",
-          "fields" : "variants"
-      }
+      "variantName" : "Johann Wolfgang Goethe"
   }
 }
 '
@@ -142,8 +147,18 @@ curl -XGET 'localhost:9200/test/_refresh'
 curl -XPOST 'localhost:9200/test/books/_search?pretty' -d '
 {
    "query" : {
+       "match" : {
+            "name" : "Goethe"
+       }
+   }
+}
+'
+
+curl -XPOST 'localhost:9200/test/books/_search?pretty' -d '
+{
+   "query" : {
        "match_phrase" : {
-            "author.variantName.ref" : "Gūta, Yūhān Wulfgāng fun"
+            "name" : "Gūta, Yūhān Wulfgāng fun"
        }
    }
 }
