@@ -4,6 +4,8 @@ import org.apache.lucene.document.Field;
 import org.apache.lucene.document.FieldType;
 import org.elasticsearch.action.get.GetResponse;
 import org.elasticsearch.client.Client;
+import org.elasticsearch.common.logging.ESLogger;
+import org.elasticsearch.common.logging.ESLoggerFactory;
 import org.elasticsearch.common.settings.ImmutableSettings;
 import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.common.xcontent.XContentParser;
@@ -29,6 +31,8 @@ import static org.elasticsearch.index.mapper.core.TypeParsers.parseMultiField;
 import static org.elasticsearch.index.mapper.core.TypeParsers.parsePathType;
 
 public class ReferenceMapper extends AbstractFieldMapper<Object> {
+
+    private final static ESLogger logger = ESLoggerFactory.getLogger("","reference");
 
     public static final String REF = "ref";
 
@@ -283,7 +287,8 @@ public class ReferenceMapper extends AbstractFieldMapper<Object> {
         }
         context.externalValue(content);
         contentMapper.parse(context);
-        if (index != null && type != null && fields != null) {
+        // client may be null at recovery time. In this case, we skip the referencing.
+        if (client != null && index != null && type != null && fields != null) {
             // get document from other index. If an exception occurs, ignore silently
             try {
                 GetResponse response = client.prepareGet()
@@ -305,9 +310,11 @@ public class ReferenceMapper extends AbstractFieldMapper<Object> {
                             }
                         }
                     }
+                } else {
+                    logger.debug("does not exist: {}/{}/{}", index, type, content);
                 }
             } catch (Exception e) {
-                // ignore
+               logger.debug(e.getMessage());
             }
         }
     }
