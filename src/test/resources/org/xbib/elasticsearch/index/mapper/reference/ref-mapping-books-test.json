@@ -6,7 +6,24 @@
         "ref_index" : "authorities",
         "ref_type" : "persons",
         "ref_fields" : [ "author" ],
-        "to" : [ "dc.creator", "bib.contributor" ]
+        "copy_to" : [
+          "dc.creator",
+          "bib.contributor"
+        ]
+      },
+      "dc" : {
+        "properties" : {
+          "creator" : {
+            "type" : "string"
+          }
+        }
+      },
+      "bib" : {
+        "properties" : {
+          "contributor" : {
+            "type" : "string"
+          }
+        }
       }
     }
   }

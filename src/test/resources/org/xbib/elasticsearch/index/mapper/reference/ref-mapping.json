@@ -8,9 +8,12 @@
                 "ref_fields": [
                     "myfield"
                 ],
-                "to": [
-                    "someField.ref"
+                "copy_to": [
+                    "ref"
                 ]
+            },
+            "ref" : {
+                "type" : "string"
             }
         }
     }

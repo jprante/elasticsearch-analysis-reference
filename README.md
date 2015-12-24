@@ -36,18 +36,19 @@ the index.
 
 | Elasticsearch  | Plugin        | Release date |
 | -------------- | ------------- | ------------ |
+| 2.1.1          | 2.1.1.0       | Dec 24, 2015 |
 | 2.0.0-beta2    | 2.0.0-beta2.0 | Sep 20, 2015 |
 | 1.3.2          | 1.3.0.3       | Aug 24, 2014 |
 | 1.3.1          | 1.3.0.0       | Aug  5, 2014 |
 | 1.2.1          | 1.2.1.0       | Jul  1, 2014 |
 
+## Installation 2.x
+
+    ./bin/plugin install http://xbib.org/repository/org/xbib/elasticsearch/plugin/elasticsearch-analysis-reference/2.1.1.0/elasticsearch-analysis-reference-2.1.1.0-plugin.zip
+
 ## Installation 1.x
 
     ./bin/plugin -install analysis-reference -url http://xbib.org/repository/org/xbib/elasticsearch/plugin/elasticsearch-analysis-reference/1.3.0.3/elasticsearch-analysis-reference-1.3.0.3-plugin.zip
-
-## Installation 2.x
-
-    ./bin/plugin install http://xbib.org/repository/org/xbib/elasticsearch/plugin/elasticsearch-analysis-reference/2.0.0-beta2.0/elasticsearch-analysis-reference-2.0.0-beta2.0-plugin.zip
 
 Do not forget to restart the node after installing.
 

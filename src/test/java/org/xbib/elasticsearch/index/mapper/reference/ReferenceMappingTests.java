@@ -9,20 +9,19 @@ import org.elasticsearch.cluster.metadata.MappingMetaData;
 import org.elasticsearch.common.bytes.BytesReference;
 import org.elasticsearch.common.logging.ESLogger;
 import org.elasticsearch.common.logging.ESLoggerFactory;
-import org.elasticsearch.common.settings.Settings;
+import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.index.mapper.DocumentMapper;
 import org.elasticsearch.index.mapper.DocumentMapperParser;
 import org.elasticsearch.index.mapper.ParseContext;
 import org.elasticsearch.index.query.QueryBuilder;
 import org.elasticsearch.node.Node;
-import org.elasticsearch.node.NodeBuilder;
 import org.elasticsearch.search.SearchHit;
-import org.junit.AfterClass;
+import org.junit.After;
 import org.junit.Assert;
-import org.junit.BeforeClass;
+import org.junit.Before;
 import org.junit.Test;
-import org.xbib.elasticsearch.index.mapper.MapperTestUtils;
-import org.xbib.elasticsearch.plugin.reference.ReferencePlugin;
+import org.xbib.elasticsearch.MapperTestUtils;
+import org.xbib.elasticsearch.NodeTestUtils;
 
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -36,49 +35,34 @@ public class ReferenceMappingTests extends Assert {
 
     private final static ESLogger logger = ESLoggerFactory.getLogger(ReferenceMappingTests.class.getName());
 
-    private static Node node;
-    private static Client client;
-    private static DocumentMapperParser mapperParser;
+    private Node node;
+    private Client client;
+    private DocumentMapperParser mapperParser;
 
-    @BeforeClass
-    public static void setupMapperParser() throws IOException {
-        Settings nodeSettings = Settings.settingsBuilder()
-                .put("path.home", System.getProperty("path.home"))
-                .put("plugin.types", ReferencePlugin.class.getName())
-                .put("index.number_of_shards", 1)
-                .put("index.number_of_replica", 0)
-                .put("cluster.routing.schedule", "50ms")
-                .build();
-        node = NodeBuilder.nodeBuilder().settings(nodeSettings).local(true).build().start();
+    @Before
+    public void setupMapperParser() throws IOException {
+        node = NodeTestUtils.createNode();
         client = node.client();
         try {
             client.admin().indices().prepareDelete("test").execute().actionGet();
         } catch (Exception e) {
             logger.warn("unable to delete test index");
         }
-        BytesReference json = jsonBuilder().startObject().array("myfield", "a","b","c").endObject().bytes();
-        client.prepareIndex("test", "test", "1234").setSource(json).execute().actionGet();
+        XContentBuilder json = jsonBuilder().startObject().array("myfield", "a","b","c").endObject();
+        client.prepareIndex("test", "test", "1234").setSource(json.bytes()).execute().actionGet();
         try {
             client.admin().indices().prepareDelete("authorities").execute().actionGet();
         } catch (Exception e) {
             logger.warn("unable to delete test index");
         }
-
-        json = jsonBuilder().startObject().field("author", "John Doe").endObject().bytes();
-        client.prepareIndex("authorities", "persons", "1").setSource(json).execute().actionGet();
-
-        mapperParser = MapperTestUtils.newMapperParser();
-        mapperParser.putTypeParser(ReferenceMapper.CONTENT_TYPE, new ReferenceMapper.TypeParser(client));
+        json = jsonBuilder().startObject().field("author", "John Doe").endObject();
+        client.prepareIndex("authorities", "persons", "1").setSource(json.bytes()).execute().actionGet();
+        mapperParser = MapperTestUtils.newMapperParser(client);
     }
 
-    @AfterClass
-    public static void cleanup() throws InterruptedException {
-        if (client != null) {
-            client.close();
-        }
-        if (node != null) {
-            node.close();
-        }
+    @After
+    public void cleanup() throws IOException {
+        NodeTestUtils.releaseNode(node);
     }
 
     @Test
@@ -94,10 +78,11 @@ public class ReferenceMappingTests extends Assert {
             logger.info("testRefMappings {} = {}", field.name(), field.stringValue());
         }
         assertNotNull(docMapper.mappers().smartNameFieldMapper("someField"));
-        assertEquals(3, doc.getFields("someField.ref").length);
-        assertEquals("a", doc.getFields("someField.ref")[0].stringValue());
-        assertEquals("b", doc.getFields("someField.ref")[1].stringValue());
-        assertEquals("c", doc.getFields("someField.ref")[2].stringValue());
+        assertEquals("1234", doc.getFields("someField")[0].stringValue());
+        assertEquals(3, doc.getFields("ref").length);
+        assertEquals("a", doc.getFields("ref")[0].stringValue());
+        assertEquals("b", doc.getFields("ref")[1].stringValue());
+        assertEquals("c", doc.getFields("ref")[2].stringValue());
 
         // re-parse from mapping
         String builtMapping = docMapper.mappingSource().string();
@@ -109,10 +94,11 @@ public class ReferenceMappingTests extends Assert {
         for (IndexableField field : doc.getFields()) {
             logger.info("reparse testRefMappings {} = {}", field.name(), field.stringValue());
         }
-        assertEquals(3, doc.getFields("someField.ref").length);
-        assertEquals("a", doc.getFields("someField.ref")[0].stringValue());
-        assertEquals("b", doc.getFields("someField.ref")[1].stringValue());
-        assertEquals("c", doc.getFields("someField.ref")[2].stringValue());
+        assertEquals("1234", doc.getFields("someField")[0].stringValue());
+        assertEquals(3, doc.getFields("ref").length);
+        assertEquals("a", doc.getFields("ref")[0].stringValue());
+        assertEquals("b", doc.getFields("ref")[1].stringValue());
+        assertEquals("c", doc.getFields("ref")[2].stringValue());
     }
 
     @Test
@@ -146,11 +132,6 @@ public class ReferenceMappingTests extends Assert {
                 .field("authorID", "1")
                 .endObject().bytes();
         ParseContext.Document doc = docMapper.parse("docs", "docs", "1", json).rootDoc();
-        for (IndexableField field : doc.getFields()) {
-            logger.info("testRefFromID {} = {} {}", field.name(), field.stringValue(), field.fieldType().stored());
-        }
-        assertEquals(1, doc.getFields("authorID").length, 1);
-        assertEquals("1", doc.getFields("authorID")[0].stringValue());
         assertEquals(1, doc.getFields("ref").length, 1);
         assertEquals("John Doe", doc.getFields("ref")[0].stringValue());
     }
@@ -162,13 +143,10 @@ public class ReferenceMappingTests extends Assert {
         try {
             client.admin().indices().prepareDelete("books").execute().actionGet();
         } catch (Exception e) {
-            logger.warn("unable to delete index 'books'");
+            logger.warn("unable to delete index books");
         }
-        client.admin().indices().prepareCreate("books")
-                .addMapping("test", mapping)
-                .execute().actionGet();
+        client.admin().indices().prepareCreate("books").addMapping("test", mapping).execute().actionGet();
         client.prepareIndex("books", "test", "1").setSource(json).setRefresh(true).execute().actionGet();
-
         // get mappings
         GetMappingsResponse getMappingsResponse= client.admin().indices().getMappings(new GetMappingsRequest()
                 .indices("books")
