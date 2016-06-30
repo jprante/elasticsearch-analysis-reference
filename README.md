@@ -36,6 +36,7 @@ the index.
 
 | Elasticsearch  | Plugin        | Release date |
 | -------------- | ------------- | ------------ |
+| 2.2.1          | 2.2.1.0       | Jun 30, 2016 |
 | 2.1.1          | 2.1.1.0       | Dec 24, 2015 |
 | 2.0.0-beta2    | 2.0.0-beta2.0 | Sep 20, 2015 |
 | 1.3.2          | 1.3.0.3       | Aug 24, 2014 |
@@ -44,7 +45,7 @@ the index.
 
 ## Installation 2.x
 
-    ./bin/plugin install http://xbib.org/repository/org/xbib/elasticsearch/plugin/elasticsearch-analysis-reference/2.1.1.0/elasticsearch-analysis-reference-2.1.1.0-plugin.zip
+    ./bin/plugin install http://xbib.org/repository/org/xbib/elasticsearch/plugin/elasticsearch-analysis-reference/2.2.1.0/elasticsearch-analysis-reference-2.2.1.0-plugin.zip
 
 ## Installation 1.x
 

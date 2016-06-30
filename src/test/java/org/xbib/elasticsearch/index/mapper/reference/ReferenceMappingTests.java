@@ -7,6 +7,7 @@ import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.client.Client;
 import org.elasticsearch.cluster.metadata.MappingMetaData;
 import org.elasticsearch.common.bytes.BytesReference;
+import org.elasticsearch.common.compress.CompressedXContent;
 import org.elasticsearch.common.logging.ESLogger;
 import org.elasticsearch.common.logging.ESLoggerFactory;
 import org.elasticsearch.common.xcontent.XContentBuilder;
@@ -68,7 +69,7 @@ public class ReferenceMappingTests extends Assert {
     @Test
     public void testRefMappings() throws Exception {
         String mapping = copyToStringFromClasspath("ref-mapping.json");
-        DocumentMapper docMapper = mapperParser.parse(mapping);
+        DocumentMapper docMapper = mapperParser.parse("someType", new CompressedXContent(mapping));
         BytesReference json = jsonBuilder().startObject()
                 .field("someField", "1234")
                 .endObject().bytes();
@@ -86,7 +87,7 @@ public class ReferenceMappingTests extends Assert {
 
         // re-parse from mapping
         String builtMapping = docMapper.mappingSource().string();
-        docMapper = mapperParser.parse(builtMapping);
+        docMapper = mapperParser.parse("someType", new CompressedXContent(builtMapping));
         json = jsonBuilder().startObject()
                 .field("someField", "1234")
                 .endObject().bytes();
@@ -104,7 +105,7 @@ public class ReferenceMappingTests extends Assert {
     @Test
     public void testRefInDoc() throws Exception {
         String mapping = copyToStringFromClasspath("ref-mapping-authorities.json");
-        DocumentMapper docMapper = mapperParser.parse(mapping);
+        DocumentMapper docMapper = mapperParser.parse("docs", new CompressedXContent(mapping));
         BytesReference json = jsonBuilder().startObject()
                 .field("title", "A title")
                 .field("dc.creator", "A creator")
@@ -126,7 +127,7 @@ public class ReferenceMappingTests extends Assert {
     @Test
     public void testRefFromID() throws Exception {
         String mapping = copyToStringFromClasspath("ref-mapping-from-id.json");
-        DocumentMapper docMapper = mapperParser.parse(mapping);
+        DocumentMapper docMapper = mapperParser.parse("docs", new CompressedXContent(mapping));
         BytesReference json = jsonBuilder().startObject()
                 .field("title", "A title")
                 .field("authorID", "1")

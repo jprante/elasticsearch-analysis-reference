@@ -1,25 +1,27 @@
 
-def xbibGroup = 'org.xbib.elasticsearch.plugin'
-def xbibVersion = '2.1.1.0'
-
-group = xbibGroup
-version = xbibVersion
-
-println "Current JVM: " + org.gradle.internal.jvm.Jvm.current()
+plugins {
+    id "co.riiid.gradle" version "0.4.2"
+}
 
 ext {
     pluginName = 'reference'
     pluginClassname  = 'org.xbib.elasticsearch.plugin.reference.ReferencePlugin'
     pluginDescription = 'Reference plugin for Elasticsearch'
+    user = 'jprante'
+    name = 'elasticsearch-reference'
+    scmUrl = 'https://github.com/' + user + '/' + name
+    scmConnection = 'scm:git:git://github.com/' + user + '/' + name + '.git'
+    scmDeveloperConnection = 'scm:git:git://github.com/' + user + '/' + name + '.git'
     versions = [
         'log4j': '2.5',
         'junit' : '4.12',
-        'elasticsearch' : '2.1.1'
+        'elasticsearch' : '2.2.1'
     ]
 }
 
 apply plugin: 'java'
 apply plugin: 'maven'
+apply plugin: 'signing'
 
 repositories {
     mavenCentral()
@@ -42,7 +44,6 @@ sourceSets {
 }
 
 configurations {
-    providedCompile
     releaseJars
     wagon
     integrationTestCompile.extendsFrom testCompile
@@ -128,37 +129,26 @@ clean {
     delete "plugins"
 }
 
+task javadocJar(type: Jar, dependsOn: classes) {
+    from javadoc
+    into 'build/tmp'
+    classifier 'javadoc'
+}
+
 task sourcesJar(type: Jar, dependsOn: classes) {
     from sourceSets.main.allSource
+    into 'build/tmp'
     classifier 'sources'
 }
 
 artifacts {
-    archives sourcesJar
-    archives buildPluginZip
+    archives javadocJar, sourcesJar, buildPluginZip
 }
 
-uploadArchives {
-    repositories {
-        if (project.hasProperty("xbibUsername")) {
-            mavenDeployer {
-                configuration = configurations.wagon
-                repository(
-                        id: 'xbib.org',
-                        url: uri('scpexe://xbib.org/repository'),
-                        authentication: [userName: xbibUsername, privateKey: xbibPrivateKey]
-                )
-                pom.project {
-                    inceptionYear '2012'
-                    licenses {
-                        license {
-                            name 'The Apache Software License, Version 2.0'
-                            url 'http://www.apache.org/licenses/LICENSE-2.0.txt'
-                            distribution 'repo'
-                        }
-                    }
-                }
-            }
-        }
+if (project.hasProperty('signing.keyId')) {
+    signing {
+        sign configurations.archives
     }
 }
+
+apply from: 'gradle/publish.gradle'

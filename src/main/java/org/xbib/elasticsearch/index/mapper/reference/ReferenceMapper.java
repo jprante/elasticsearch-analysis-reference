@@ -1,25 +1,3 @@
-/*
- * Copyright (C) 2014 Jörg Prante
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU Affero General Public License as published
- * by the Free Software Foundation; either version 3 of the License, or
- * (at your option) any later version.
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU Affero General Public License for more details.
- *
- * You should have received a copy of the GNU Affero General Public License
- * along with this program; if not, see http://www.gnu.org/licenses
- * or write to the Free Software Foundation, Inc., 51 Franklin Street,
- * Fifth Floor, Boston, MA 02110-1301 USA.
- *
- * The interactive user interfaces in modified source and object code
- * versions of this program must display Appropriate Legal Notices,
- * as required under Section 5 of the GNU Affero General Public License.
- *
- */
 package org.xbib.elasticsearch.index.mapper.reference;
 
 import org.apache.lucene.document.Field;
@@ -36,8 +14,6 @@ import org.elasticsearch.index.mapper.FieldMapper;
 import org.elasticsearch.index.mapper.MappedFieldType;
 import org.elasticsearch.index.mapper.Mapper;
 import org.elasticsearch.index.mapper.MapperParsingException;
-import org.elasticsearch.index.mapper.MergeMappingException;
-import org.elasticsearch.index.mapper.MergeResult;
 import org.elasticsearch.index.mapper.ParseContext;
 
 import java.io.IOException;
@@ -100,7 +76,7 @@ public class ReferenceMapper extends FieldMapper {
         private List<String> refFields;
 
         public Builder(String name, Client client) {
-            super(name, new ReferenceFieldType());
+            super(name, Defaults.FIELD_TYPE, Defaults.FIELD_TYPE);
             this.client = client;
             this.refFields = new LinkedList<>();
             this.contentBuilder = stringField(name);
@@ -173,6 +149,10 @@ public class ReferenceMapper extends FieldMapper {
                 String fieldName = entry.getKey();
                 Object fieldNode = entry.getValue();
                 switch (fieldName) {
+                    case "analyzer" : {
+                        iterator.remove();
+                        break;
+                    }
                     case "ref_index":
                         builder.refIndex(fieldNode.toString());
                         iterator.remove();
@@ -312,11 +292,6 @@ public class ReferenceMapper extends FieldMapper {
     @Override
     protected void parseCreateField(ParseContext parseContext, List<Field> fields) throws IOException {
         // override
-    }
-
-    @Override
-    public void merge(Mapper mergeWith, MergeResult mergeResult) throws MergeMappingException {
-        // ignore this for now
     }
 
     @Override

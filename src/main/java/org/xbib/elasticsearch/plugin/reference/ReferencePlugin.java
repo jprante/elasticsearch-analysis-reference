@@ -39,10 +39,8 @@ public class ReferencePlugin extends Plugin {
     @Override
     public Collection<Module> nodeModules() {
         Collection<Module> modules = new ArrayList<>();
-        if ("node".equals(settings.get("client.type"))) {
-            if (settings.getAsBoolean("plugins.reference.enabled", true)) {
-                modules.add(new ReferenceMapperModule(refMapperTypeParser));
-            }
+        if (settings.getAsBoolean("plugins.reference.enabled", true)) {
+            modules.add(new ReferenceMapperModule(refMapperTypeParser));
         }
         return modules;
     }
@@ -50,19 +48,15 @@ public class ReferencePlugin extends Plugin {
     @Override
     public Collection<Class<? extends LifecycleComponent>> nodeServices() {
         Collection<Class<? extends LifecycleComponent>> services = new ArrayList<>();
-        if ("node".equals(settings.get("client.type"))) {
-            if (settings.getAsBoolean("plugins.reference.enabled", true)) {
-                services.add(ReferenceMapperService.class);
-            }
+        if (settings.getAsBoolean("plugins.reference.enabled", true)) {
+            services.add(ReferenceMapperService.class);
         }
         return services;
     }
 
     public void onModule(IndicesModule indicesModule) {
-        if ("node".equals(settings.get("client.type"))) {
-            if (settings.getAsBoolean("plugins.reference.enabled", true)) {
-                indicesModule.registerMapper(ReferenceMapper.CONTENT_TYPE, refMapperTypeParser);
-            }
+        if (settings.getAsBoolean("plugins.reference.enabled", true)) {
+            indicesModule.registerMapper(ReferenceMapper.CONTENT_TYPE, refMapperTypeParser);
         }
     }
 
