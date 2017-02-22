@@ -14,6 +14,9 @@ import org.xbib.elasticsearch.index.mapper.reference.ReferenceMapperTypeParser;
 import java.util.ArrayList;
 import java.util.Collection;
 
+/**
+ *
+ */
 public class ReferencePlugin extends Plugin {
 
     private final Settings settings;
@@ -45,6 +48,7 @@ public class ReferencePlugin extends Plugin {
         return modules;
     }
 
+    @SuppressWarnings("rawtypes")
     @Override
     public Collection<Class<? extends LifecycleComponent>> nodeServices() {
         Collection<Class<? extends LifecycleComponent>> services = new ArrayList<>();

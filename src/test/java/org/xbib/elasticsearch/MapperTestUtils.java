@@ -50,11 +50,13 @@ import org.elasticsearch.indices.analysis.IndicesAnalysisService;
 import org.elasticsearch.indices.mapper.MapperRegistry;
 import org.xbib.elasticsearch.index.mapper.reference.ReferenceMapper;
 import org.xbib.elasticsearch.index.mapper.reference.ReferenceMapperTypeParser;
-import org.xbib.elasticsearch.plugin.reference.ReferencePlugin;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
 
+/**
+ *
+ */
 public class MapperTestUtils {
 
     public static DocumentMapperParser newMapperParser(Client client) {

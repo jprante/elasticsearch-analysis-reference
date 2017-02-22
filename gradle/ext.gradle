@@ -1,0 +1,13 @@
+ext {
+    pluginName = 'reference'
+    pluginClassname  = 'org.xbib.elasticsearch.plugin.reference.ReferencePlugin'
+    pluginDescription = 'Reference plugin for Elasticsearch'
+    user = 'jprante'
+    name = 'elasticsearch-reference'
+    scmUrl = 'https://github.com/' + user + '/' + name
+    scmConnection = 'scm:git:git://github.com/' + user + '/' + name + '.git'
+    scmDeveloperConnection = 'scm:git:git://github.com/' + user + '/' + name + '.git'
+    versions = [
+
+    ]
+}

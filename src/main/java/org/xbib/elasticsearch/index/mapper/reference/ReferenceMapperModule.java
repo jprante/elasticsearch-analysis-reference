@@ -2,6 +2,9 @@ package org.xbib.elasticsearch.index.mapper.reference;
 
 import org.elasticsearch.common.inject.AbstractModule;
 
+/**
+ *
+ */
 public class ReferenceMapperModule extends AbstractModule {
 
     private final ReferenceMapperTypeParser typeParser;

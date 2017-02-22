@@ -1,0 +1,11 @@
+= Reference plugin for Elasticsearch
+Jörg Prante
+Version 1.0
+:sectnums:
+:toc: preamble
+:toclevels: 4
+:!toc-title: Content
+:experimental:
+:description: A plugin for Elasticsearch to reference other indices
+:keywords: Elasticsearch, Plugin, Reference, Java
+:icons: font

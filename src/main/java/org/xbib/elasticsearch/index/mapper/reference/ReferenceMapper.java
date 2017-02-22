@@ -1,5 +1,8 @@
 package org.xbib.elasticsearch.index.mapper.reference;
 
+import static org.elasticsearch.index.mapper.MapperBuilders.stringField;
+import static org.elasticsearch.index.mapper.core.TypeParsers.parseField;
+
 import org.apache.lucene.document.Field;
 import org.apache.lucene.index.IndexOptions;
 import org.elasticsearch.action.get.GetResponse;
@@ -23,15 +26,18 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
-import static org.elasticsearch.index.mapper.MapperBuilders.stringField;
-import static org.elasticsearch.index.mapper.core.TypeParsers.parseField;
-
+/**
+ *
+ */
 public class ReferenceMapper extends FieldMapper {
 
-    private final static ESLogger logger = ESLoggerFactory.getLogger("", "reference");
+    private static final ESLogger logger = ESLoggerFactory.getLogger("", "reference");
 
     public static final String CONTENT_TYPE = "ref";
 
+    /**
+     *
+     */
     public static final class Defaults {
         public static final ReferenceFieldType FIELD_TYPE = new ReferenceFieldType();
         static {
@@ -39,6 +45,9 @@ public class ReferenceMapper extends FieldMapper {
         }
     }
 
+    /**
+     *
+     */
     public static final class ReferenceFieldType extends MappedFieldType {
 
         public ReferenceFieldType() {
@@ -62,6 +71,9 @@ public class ReferenceMapper extends FieldMapper {
         }
     }
 
+    /**
+     *
+     */
     @SuppressWarnings({"rawtypes"})
     public static class Builder extends FieldMapper.Builder<Builder, ReferenceMapper> {
 
@@ -95,7 +107,7 @@ public class ReferenceMapper extends FieldMapper {
         @SuppressWarnings("unchecked")
         public Builder refFields(Object refFields) {
             if (refFields instanceof List) {
-                this.refFields = (List<String>)refFields;
+                this.refFields = (List<String>) refFields;
             } else if (refFields != null) {
                 this.refFields = Collections.singletonList(refFields.toString());
             }
@@ -118,7 +130,6 @@ public class ReferenceMapper extends FieldMapper {
             }
             defaultFieldType.freeze();
             this.setupFieldType(context);
-
             return new ReferenceMapper(name,
                     this.fieldType,
                     defaultFieldType,
@@ -133,12 +144,15 @@ public class ReferenceMapper extends FieldMapper {
         }
     }
 
+    /**
+     *
+     */
     public static class TypeParser implements Mapper.TypeParser {
 
         private Client client;
 
         @Override
-        @SuppressWarnings({"unchecked","rawtypes"})
+        @SuppressWarnings({"unchecked", "rawtypes"})
         public Mapper.Builder parse(String name, Map<String, Object> node, ParserContext parserContext)
                 throws MapperParsingException {
             ReferenceMapper.Builder builder = new Builder(name, client);
@@ -188,7 +202,7 @@ public class ReferenceMapper extends FieldMapper {
 
     private CopyTo copyTo;
 
-    private final static CopyTo COPYTO_EMPTY = new CopyTo.Builder().build();
+    private static final CopyTo COPYTO_EMPTY = new CopyTo.Builder().build();
 
     public ReferenceMapper(String simpleName,
                            MappedFieldType fieldType,
@@ -317,9 +331,9 @@ public class ReferenceMapper extends FieldMapper {
         return CONTENT_TYPE;
     }
 
-    /* copied from org.elasticsearch.index.mapper.DocumentParser private methods */
+    /* copied from org.elasticsearch.index.mapper.DocumentParser private methods. */
 
-    /** Creates instances of the fields that the current field should be copied to */
+    /* Creates instances of the fields that the current field should be copied to */
     private static void parseCopyFields(ParseContext context, List<String> copyToFields) throws IOException {
         if (!context.isWithinCopyTo() && !copyToFields.isEmpty()) {
             context = context.createCopyToContext();
@@ -350,5 +364,4 @@ public class ReferenceMapper extends FieldMapper {
             }
         }
     }
-
 }

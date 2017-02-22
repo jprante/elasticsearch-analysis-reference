@@ -1,0 +1,4 @@
+= Reference plugin for Elasticsearch
+Jörg Prante
+Version 1.0
+

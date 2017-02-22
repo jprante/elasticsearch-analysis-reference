@@ -1,5 +1,9 @@
 package org.xbib.elasticsearch.index.mapper.reference;
 
+import static org.elasticsearch.common.io.Streams.copyToString;
+import static org.elasticsearch.common.xcontent.XContentFactory.jsonBuilder;
+import static org.elasticsearch.index.query.QueryBuilders.matchPhraseQuery;
+
 import org.apache.lucene.index.IndexableField;
 import org.elasticsearch.action.admin.indices.mapping.get.GetMappingsRequest;
 import org.elasticsearch.action.admin.indices.mapping.get.GetMappingsResponse;
@@ -28,13 +32,12 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.Reader;
 
-import static org.elasticsearch.common.io.Streams.copyToString;
-import static org.elasticsearch.common.xcontent.XContentFactory.jsonBuilder;
-import static org.elasticsearch.index.query.QueryBuilders.matchPhraseQuery;
-
+/**
+ *
+ */
 public class ReferenceMappingTests extends Assert {
 
-    private final static ESLogger logger = ESLoggerFactory.getLogger(ReferenceMappingTests.class.getName());
+    private static final ESLogger logger = ESLoggerFactory.getLogger(ReferenceMappingTests.class.getName());
 
     private Node node;
     private Client client;
@@ -49,7 +52,7 @@ public class ReferenceMappingTests extends Assert {
         } catch (Exception e) {
             logger.warn("unable to delete test index");
         }
-        XContentBuilder json = jsonBuilder().startObject().array("myfield", "a","b","c").endObject();
+        XContentBuilder json = jsonBuilder().startObject().array("myfield", "a", "b", "c").endObject();
         client.prepareIndex("test", "test", "1234").setSource(json.bytes()).execute().actionGet();
         try {
             client.admin().indices().prepareDelete("authorities").execute().actionGet();
@@ -149,7 +152,7 @@ public class ReferenceMappingTests extends Assert {
         client.admin().indices().prepareCreate("books").addMapping("test", mapping).execute().actionGet();
         client.prepareIndex("books", "test", "1").setSource(json).setRefresh(true).execute().actionGet();
         // get mappings
-        GetMappingsResponse getMappingsResponse= client.admin().indices().getMappings(new GetMappingsRequest()
+        GetMappingsResponse getMappingsResponse = client.admin().indices().getMappings(new GetMappingsRequest()
                 .indices("books")
                 .types("test"))
                 .actionGet();

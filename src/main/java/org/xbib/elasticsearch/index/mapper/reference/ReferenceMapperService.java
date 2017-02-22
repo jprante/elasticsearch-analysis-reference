@@ -6,6 +6,9 @@ import org.elasticsearch.common.inject.Inject;
 import org.elasticsearch.common.inject.Injector;
 import org.elasticsearch.common.settings.Settings;
 
+/**
+ *
+ */
 public class ReferenceMapperService extends AbstractLifecycleComponent<ReferenceMapperService> {
 
     private final Injector injector;

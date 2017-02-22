@@ -1,6 +1,5 @@
 package org.xbib.elasticsearch;
 
-import org.elasticsearch.client.Client;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.node.MockNode;
 import org.elasticsearch.node.Node;
@@ -16,6 +15,9 @@ import java.nio.file.Paths;
 import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
 
+/**
+ *
+ */
 public class NodeTestUtils {
 
     private Node node;
@@ -64,8 +66,6 @@ public class NodeTestUtils {
                 Files.delete(dir);
                 return FileVisitResult.CONTINUE;
             }
-
         });
-
     }
 }
