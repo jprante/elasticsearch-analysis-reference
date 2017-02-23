@@ -1,0 +1,10 @@
+{
+  "ref" : {
+    "properties": {
+      "author": {
+        "type": "text",
+        "store" : true
+      }
+    }
+  }
+}

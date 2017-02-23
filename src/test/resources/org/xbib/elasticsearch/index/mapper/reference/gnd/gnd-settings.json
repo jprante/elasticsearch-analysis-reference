@@ -1,0 +1,16 @@
+{
+  "index": {
+    "mapping" : {
+      "total_fields" : {
+        "limit": 10000
+      }
+    },
+    "analysis": {
+      "analyzer": {
+        "default": {
+          "type": "keyword"
+        }
+      }
+    }
+  }
+}

@@ -1,10 +1,10 @@
 {
-    "title" : "A title",
-    "authorID" : "1",
-    "dc" : {
-        "creator" : "A creator"
-    },
-    "bib" : {
-        "contributor" : "A contributor"
-    }
+  "title" : "A title",
+  "authorID" : "1",
+  "dc" : {
+    "creator" : "A creator"
+  },
+  "bib" : {
+    "contributor" : "A contributor"
+  }
 }

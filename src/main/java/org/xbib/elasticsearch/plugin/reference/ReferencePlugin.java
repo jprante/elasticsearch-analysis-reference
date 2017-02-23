@@ -1,67 +1,46 @@
 package org.xbib.elasticsearch.plugin.reference;
 
 import org.elasticsearch.common.component.LifecycleComponent;
-import org.elasticsearch.common.inject.Inject;
 import org.elasticsearch.common.inject.Module;
-import org.elasticsearch.common.settings.Settings;
-import org.elasticsearch.indices.IndicesModule;
+import org.elasticsearch.index.mapper.Mapper;
+import org.elasticsearch.plugins.MapperPlugin;
 import org.elasticsearch.plugins.Plugin;
+import org.xbib.elasticsearch.common.reference.ReferenceService;
 import org.xbib.elasticsearch.index.mapper.reference.ReferenceMapper;
 import org.xbib.elasticsearch.index.mapper.reference.ReferenceMapperModule;
-import org.xbib.elasticsearch.index.mapper.reference.ReferenceMapperService;
 import org.xbib.elasticsearch.index.mapper.reference.ReferenceMapperTypeParser;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 /**
  *
  */
-public class ReferencePlugin extends Plugin {
+public class ReferencePlugin extends Plugin implements MapperPlugin {
 
-    private final Settings settings;
+    private static final ReferenceMapperTypeParser referenceMapperTypeParser = new ReferenceMapperTypeParser();
 
-    private final ReferenceMapperTypeParser refMapperTypeParser;
-
-    @Inject
-    public ReferencePlugin(Settings settings) {
-        this.settings = settings;
-        this.refMapperTypeParser = new ReferenceMapperTypeParser();
+    @Override
+    public Map<String, Mapper.TypeParser> getMappers() {
+        Map<String, Mapper.TypeParser> extra = new LinkedHashMap<>();
+        extra.put(ReferenceMapper.MAPPER_TYPE, referenceMapperTypeParser);
+        return extra;
     }
 
     @Override
-    public String name() {
-        return "reference";
+    public Collection<Module> createGuiceModules() {
+        Collection<Module> extra = new ArrayList<>();
+        extra.add(new ReferenceMapperModule(referenceMapperTypeParser));
+        return extra;
     }
 
     @Override
-    public String description() {
-        return "Reference plugin for Elasticsearch";
-    }
-
-    @Override
-    public Collection<Module> nodeModules() {
-        Collection<Module> modules = new ArrayList<>();
-        if (settings.getAsBoolean("plugins.reference.enabled", true)) {
-            modules.add(new ReferenceMapperModule(refMapperTypeParser));
-        }
-        return modules;
-    }
-
-    @SuppressWarnings("rawtypes")
-    @Override
-    public Collection<Class<? extends LifecycleComponent>> nodeServices() {
-        Collection<Class<? extends LifecycleComponent>> services = new ArrayList<>();
-        if (settings.getAsBoolean("plugins.reference.enabled", true)) {
-            services.add(ReferenceMapperService.class);
-        }
-        return services;
-    }
-
-    public void onModule(IndicesModule indicesModule) {
-        if (settings.getAsBoolean("plugins.reference.enabled", true)) {
-            indicesModule.registerMapper(ReferenceMapper.CONTENT_TYPE, refMapperTypeParser);
-        }
+    public Collection<Class<? extends LifecycleComponent>> getGuiceServiceClasses() {
+        Collection<Class<? extends LifecycleComponent>> extra = new ArrayList<>();
+        extra.add(ReferenceService.class);
+        return extra;
     }
 
 }
