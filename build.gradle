@@ -97,7 +97,6 @@ clean {
 
 asciidoctor {
     backends 'html5'
-    outputDir = file('docs')
     separateOutputDirs = false
     attributes 'source-highlighter': 'coderay',
             toc                 : '',
@@ -113,7 +112,6 @@ javadoc {
     options.addStringOption "-base-dir", "${projectDir}"
     options.addStringOption "-attribute",
             "name=${project.name},version=${project.version},title-link=https://github.com/jprante/${project.name}"
-    options.destinationDirectory(file("${projectDir}/docs/javadoc"))
     configure(options) {
         noTimestamp = true
     }
