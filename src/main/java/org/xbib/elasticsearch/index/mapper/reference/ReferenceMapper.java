@@ -284,7 +284,6 @@ public class ReferenceMapper extends FieldMapper {
             }
             return new TermsQuery(name(), bytesRefs);
         }
-
     }
 
     /**
@@ -407,5 +406,4 @@ public class ReferenceMapper extends FieldMapper {
             return builder;
         }
     }
-
 }
