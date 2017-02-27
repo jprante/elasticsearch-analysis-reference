@@ -24,8 +24,6 @@ jacocoTestReport {
     reports {
         xml.enabled true
         csv.enabled false
-        xml.destination "${buildDir}/reports/jacoco-xml"
-        html.destination "${buildDir}/reports/jacoco-html"
     }
 }
 
@@ -36,6 +34,5 @@ sonarqube {
         property "sonar.tests", "src/test/java"
         property "sonar.scm.provider", "git"
         property "sonar.java.coveragePlugin", "jacoco"
-        property "sonar.junit.reportsPath", "build/test-results/test/"
     }
 }
