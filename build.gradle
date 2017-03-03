@@ -56,7 +56,7 @@ tasks.withType(JavaCompile) {
 test {
     systemProperties['path.home'] = System.getProperty("user.dir")
     testLogging {
-        showStandardStreams = true
+        showStandardStreams = false
         exceptionFormat = 'full'
     }
 }

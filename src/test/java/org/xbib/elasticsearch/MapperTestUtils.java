@@ -1,11 +1,9 @@
 package org.xbib.elasticsearch;
 
-import static org.junit.Assert.assertNotNull;
-
-import org.apache.lucene.analysis.Analyzer;
 import org.elasticsearch.Version;
 import org.elasticsearch.cluster.metadata.IndexMetaData;
 import org.elasticsearch.common.settings.Settings;
+import org.elasticsearch.common.xcontent.NamedXContentRegistry;
 import org.elasticsearch.env.Environment;
 import org.elasticsearch.index.IndexSettings;
 import org.elasticsearch.index.analysis.AnalysisRegistry;
@@ -31,25 +29,13 @@ import java.util.Map;
  */
 public class MapperTestUtils {
 
-    public static AnalysisRegistry analysisService(Settings customSettings) throws IOException {
-        Settings settings = Settings.builder()
-                .put("path.home", System.getProperty("path.home", "/tmp"))
-                .put(IndexMetaData.SETTING_VERSION_CREATED, Version.CURRENT)
-                .put(customSettings)
-                .build();
-        Environment environment = new Environment(settings);
-        ReferencePlugin referencePlugin = new ReferencePlugin();
-        AnalysisModule analysisModule = new AnalysisModule(environment, Collections.emptyList());
-        return analysisModule.getAnalysisRegistry();
-    }
-
     public static DocumentMapperParser newDocumentMapperParser(String index) throws IOException {
         return newDocumentMapperParser(Settings.EMPTY, index);
     }
 
     public static DocumentMapperParser newDocumentMapperParser(Settings customSettings, String index) throws IOException {
         Settings settings = Settings.builder()
-                .put("path.home", System.getProperty("path.home", "/tmp"))
+                .put("path.home", System.getProperty("path.home", System.getProperty("user.dir")))
                 .put(IndexMetaData.SETTING_VERSION_CREATED, Version.CURRENT)
                 .put(customSettings)
                 .build();
@@ -70,196 +56,16 @@ public class MapperTestUtils {
         Map<String, TokenFilterFactory> tokenFilterFactoryMap = analysisRegistry.buildTokenFilterFactories(indexSettings);
         Map<String, TokenizerFactory> tokenizerFactoryMap = analysisRegistry.buildTokenizerFactories(indexSettings);
         Map<String, AnalyzerProvider<?>> analyzerProviderMap = analysisRegistry.buildAnalyzerFactories(indexSettings);
-        IndexAnalyzers indexAnalyzers = analysisRegistry.build(indexSettings, analyzerProviderMap,
-                tokenizerFactoryMap, charFilterFactoryMap, tokenFilterFactoryMap);
-        MapperService mapperService = new MapperService(indexSettings, indexAnalyzers,
+        Map<String, AnalyzerProvider<?>> normalizerProviderMap = analysisRegistry.buildNormalizerFactories(indexSettings);
+        IndexAnalyzers indexAnalyzers = analysisRegistry.build(indexSettings,
+                analyzerProviderMap,
+                normalizerProviderMap,
+                tokenizerFactoryMap,
+                charFilterFactoryMap,
+                tokenFilterFactoryMap);
+        MapperService mapperService = new MapperService(indexSettings, indexAnalyzers, NamedXContentRegistry.EMPTY,
                 similarityService, mapperRegistry, null);
-        return new DocumentMapperParser(indexSettings,
-                mapperService, indexAnalyzers, similarityService, mapperRegistry, null);
-    }
-
-    public static Analyzer analyzer(String name) throws IOException {
-        Settings settings = Settings.builder()
-                .put(IndexMetaData.SETTING_VERSION_CREATED, Version.CURRENT)
-                .put("path.home", System.getProperty("path.home"))
-                .build();
-        AnalysisRegistry analysisRegistry = analysisService(settings);
-        IndexMetaData indexMetaData = IndexMetaData.builder("test")
-                .settings(settings)
-                .numberOfShards(1)
-                .numberOfReplicas(1)
-                .build();
-        IndexSettings indexSettings = new IndexSettings(indexMetaData, settings);
-        Map<String, CharFilterFactory> charFilterFactoryMap = analysisRegistry.buildCharFilterFactories(indexSettings);
-        Map<String, TokenFilterFactory> tokenFilterFactoryMap = analysisRegistry.buildTokenFilterFactories(indexSettings);
-        Map<String, TokenizerFactory> tokenizerFactoryMap = analysisRegistry.buildTokenizerFactories(indexSettings);
-        Map<String, AnalyzerProvider<?>> analyzerProviderMap = analysisRegistry.buildAnalyzerFactories(indexSettings);
-        IndexAnalyzers indexAnalyzers = analysisRegistry.build(indexSettings, analyzerProviderMap,
-                tokenizerFactoryMap, charFilterFactoryMap, tokenFilterFactoryMap);
-        Analyzer analyzer = indexAnalyzers.get(name) != null ? indexAnalyzers.get(name) : analysisRegistry.getAnalyzer(name);
-        assertNotNull(analyzer);
-        return analyzer;
-    }
-
-    public static Analyzer analyzer(Settings customSettings, String name) throws IOException {
-        Settings settings = Settings.builder()
-                .put(IndexMetaData.SETTING_VERSION_CREATED, Version.CURRENT)
-                .put("path.home", System.getProperty("path.home", "/tmp"))
-                .put(customSettings)
-                .build();
-        AnalysisRegistry analysisRegistry = analysisService(settings);
-        IndexMetaData indexMetaData = IndexMetaData.builder("test")
-                .settings(settings)
-                .numberOfShards(1)
-                .numberOfReplicas(1)
-                .build();
-        IndexSettings indexSettings = new IndexSettings(indexMetaData, settings);
-        Map<String, CharFilterFactory> charFilterFactoryMap = analysisRegistry.buildCharFilterFactories(indexSettings);
-        Map<String, TokenFilterFactory> tokenFilterFactoryMap = analysisRegistry.buildTokenFilterFactories(indexSettings);
-        Map<String, TokenizerFactory> tokenizerFactoryMap = analysisRegistry.buildTokenizerFactories(indexSettings);
-        Map<String, AnalyzerProvider<?>> analyzerProviderMap = analysisRegistry.buildAnalyzerFactories(indexSettings);
-        IndexAnalyzers indexAnalyzers = analysisRegistry.build(indexSettings, analyzerProviderMap,
-                tokenizerFactoryMap, charFilterFactoryMap, tokenFilterFactoryMap);
-        Analyzer analyzer = indexAnalyzers.get(name) != null ? indexAnalyzers.get(name) : analysisRegistry.getAnalyzer(name);
-        assertNotNull(analyzer);
-        return analyzer;
-    }
-
-    public static Analyzer analyzer(String resource, String name) throws IOException {
-        Settings settings = Settings.builder()
-                .put(IndexMetaData.SETTING_VERSION_CREATED, Version.CURRENT)
-                .put("path.home", System.getProperty("path.home", "/tmp"))
-                .loadFromStream(resource, MapperTestUtils.class.getClassLoader().getResource(resource).openStream())
-                .build();
-        AnalysisRegistry analysisRegistry = analysisService(settings);
-        IndexMetaData indexMetaData = IndexMetaData.builder("test")
-                .settings(settings)
-                .numberOfShards(1)
-                .numberOfReplicas(1)
-                .build();
-        IndexSettings indexSettings = new IndexSettings(indexMetaData, settings);
-        Map<String, CharFilterFactory> charFilterFactoryMap = analysisRegistry.buildCharFilterFactories(indexSettings);
-        Map<String, TokenFilterFactory> tokenFilterFactoryMap = analysisRegistry.buildTokenFilterFactories(indexSettings);
-        Map<String, TokenizerFactory> tokenizerFactoryMap = analysisRegistry.buildTokenizerFactories(indexSettings);
-        Map<String, AnalyzerProvider<?>> analyzerProviderMap = analysisRegistry.buildAnalyzerFactories(indexSettings);
-        IndexAnalyzers indexAnalyzers = analysisRegistry.build(indexSettings, analyzerProviderMap,
-                tokenizerFactoryMap, charFilterFactoryMap, tokenFilterFactoryMap);
-        Analyzer analyzer = indexAnalyzers.get(name) != null ? indexAnalyzers.get(name) : analysisRegistry.getAnalyzer(name);
-        assertNotNull(analyzer);
-        return analyzer;
-    }
-
-    public static TokenizerFactory tokenizerFactory(String name) throws IOException {
-        Settings settings = Settings.builder()
-                .put(IndexMetaData.SETTING_VERSION_CREATED, Version.CURRENT)
-                .put("path.home", System.getProperty("path.home", "/tmp"))
-                .build();
-        AnalysisRegistry analysisRegistry = analysisService(settings);
-        IndexMetaData indexMetaData = IndexMetaData.builder("test")
-                .settings(settings)
-                .numberOfShards(1)
-                .numberOfReplicas(1)
-                .build();
-        IndexSettings indexSettings = new IndexSettings(indexMetaData, settings);
-        Map<String, TokenizerFactory> map = analysisRegistry.buildTokenizerFactories(indexSettings);
-        TokenizerFactory tokenizerFactory = map.containsKey(name) ? map.get(name) :
-                analysisRegistry.getTokenizerProvider(name).get(new Environment(settings), name);
-        assertNotNull(tokenizerFactory);
-        return tokenizerFactory;
-    }
-
-    public static TokenizerFactory tokenizerFactory(String resource, String name) throws IOException {
-        Settings settings = Settings.builder()
-                .put(IndexMetaData.SETTING_VERSION_CREATED, Version.CURRENT)
-                .put("path.home", System.getProperty("path.home"))
-                .loadFromStream(resource, MapperTestUtils.class.getClassLoader().getResource(resource).openStream())
-                .build();
-        Environment environment = new Environment(settings);
-        AnalysisRegistry analysisRegistry = analysisService(settings);
-        IndexMetaData indexMetaData = IndexMetaData.builder("test")
-                .settings(settings)
-                .numberOfShards(1)
-                .numberOfReplicas(1)
-                .build();
-        IndexSettings indexSettings = new IndexSettings(indexMetaData, settings);
-        Map<String, TokenizerFactory> map = analysisRegistry.buildTokenizerFactories(indexSettings);
-        TokenizerFactory tokenizerFactory = map.containsKey(name) ? map.get(name) :
-                analysisRegistry.getTokenizerProvider(name).get(environment, name);
-        assertNotNull(tokenizerFactory);
-        return tokenizerFactory;
-    }
-
-    public static TokenFilterFactory tokenFilterFactory(String name) throws IOException {
-        Settings settings = Settings.builder()
-                .put(IndexMetaData.SETTING_VERSION_CREATED, Version.CURRENT)
-                .put("path.home", System.getProperty("path.home", "/tmp"))
-                .build();
-        Environment environment = new Environment(settings);
-        AnalysisRegistry analysisRegistry = analysisService(settings);
-        IndexMetaData indexMetaData = IndexMetaData.builder("test")
-                .settings(settings)
-                .numberOfShards(1)
-                .numberOfReplicas(1)
-                .build();
-        IndexSettings indexSettings = new IndexSettings(indexMetaData, settings);
-        Map<String, TokenFilterFactory> map = analysisRegistry.buildTokenFilterFactories(indexSettings);
-        return map.containsKey(name) ? map.get(name) :
-                analysisRegistry.getTokenFilterProvider(name).get(environment, name);
-    }
-
-    public static TokenFilterFactory tokenFilterFactory(String resource, String name) throws IOException {
-        Settings settings = Settings.builder()
-                .put(IndexMetaData.SETTING_VERSION_CREATED, Version.CURRENT)
-                .put("path.home", System.getProperty("path.home", "/tmp"))
-                .loadFromStream(resource, MapperTestUtils.class.getClassLoader().getResource(resource).openStream())
-                .build();
-        Environment environment = new Environment(settings);
-        AnalysisRegistry analysisRegistry = analysisService(settings);
-        IndexMetaData indexMetaData = IndexMetaData.builder("test")
-                .settings(settings)
-                .numberOfShards(1)
-                .numberOfReplicas(1)
-                .build();
-        IndexSettings indexSettings = new IndexSettings(indexMetaData, settings);
-        Map<String, TokenFilterFactory> map = analysisRegistry.buildTokenFilterFactories(indexSettings);
-        return map.containsKey(name) ? map.get(name) :
-                analysisRegistry.getTokenFilterProvider(name).get(environment, name);
-    }
-
-    public static CharFilterFactory charFilterFactory(String name) throws IOException {
-        Settings settings = Settings.builder()
-                .put(IndexMetaData.SETTING_VERSION_CREATED, Version.CURRENT)
-                .put("path.home", System.getProperty("path.home", "/tmp"))
-                .build();
-        Environment environment = new Environment(settings);
-        AnalysisRegistry analysisRegistry = analysisService(settings);
-        IndexMetaData indexMetaData = IndexMetaData.builder("test")
-                .settings(settings)
-                .numberOfShards(1)
-                .numberOfReplicas(1)
-                .build();
-        IndexSettings indexSettings = new IndexSettings(indexMetaData, settings);
-        Map<String, CharFilterFactory> map = analysisRegistry.buildCharFilterFactories(indexSettings);
-        return map.containsKey(name) ? map.get(name) :
-                analysisRegistry.getCharFilterProvider(name).get(environment, name);
-    }
-
-    public static CharFilterFactory charFilterFactory(String resource, String name) throws IOException {
-        Settings settings = Settings.builder()
-                .put(IndexMetaData.SETTING_VERSION_CREATED, Version.CURRENT)
-                .put("path.home", System.getProperty("path.home", "/tmp"))
-                .loadFromStream(resource, MapperTestUtils.class.getClassLoader().getResource(resource).openStream())
-                .build();
-        Environment environment = new Environment(settings);
-        AnalysisRegistry analysisRegistry = analysisService(settings);
-        IndexMetaData indexMetaData = IndexMetaData.builder("test")
-                .settings(settings)
-                .numberOfShards(1)
-                .numberOfReplicas(1)
-                .build();
-        IndexSettings indexSettings = new IndexSettings(indexMetaData, settings);
-        Map<String, CharFilterFactory> map = analysisRegistry.buildCharFilterFactories(indexSettings);
-        return map.containsKey(name) ? map.get(name) :
-                analysisRegistry.getCharFilterProvider(name).get(environment, name);
+        return new DocumentMapperParser(indexSettings, mapperService, indexAnalyzers, NamedXContentRegistry.EMPTY,
+                similarityService, mapperRegistry, null);
     }
 }

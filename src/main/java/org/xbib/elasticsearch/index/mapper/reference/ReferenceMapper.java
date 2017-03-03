@@ -4,8 +4,8 @@ import static org.elasticsearch.index.mapper.TypeParsers.parseField;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.apache.lucene.document.Field;
 import org.apache.lucene.index.IndexOptions;
+import org.apache.lucene.index.IndexableField;
 import org.apache.lucene.index.Term;
 import org.apache.lucene.queries.TermsQuery;
 import org.apache.lucene.search.BoostQuery;
@@ -15,6 +15,7 @@ import org.apache.lucene.util.BytesRef;
 import org.elasticsearch.Version;
 import org.elasticsearch.action.get.GetResponse;
 import org.elasticsearch.client.Client;
+import org.elasticsearch.common.geo.GeoPoint;
 import org.elasticsearch.common.lucene.BytesRefs;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.xcontent.XContentBuilder;
@@ -116,6 +117,7 @@ public class ReferenceMapper extends FieldMapper {
     }
 
     @Override
+    @SuppressWarnings("unchecked")
     public Mapper parse(ParseContext originalContext) throws IOException {
         String content = null;
         ParseContext context = originalContext;
@@ -172,7 +174,19 @@ public class ReferenceMapper extends FieldMapper {
                         .actionGet();
                 if (response != null && response.isExists()) {
                     for (String field : fields) {
-                        List<Object> list = XContentMapValues.extractRawValues(field, response.getSource());
+                        Map<String, Object> source = response.getSource();
+                        List<Object> list = XContentMapValues.extractRawValues(field, source);
+                        if (list.isEmpty()) {
+                            Object object = XContentMapValues.extractValue(field, source);
+                            if (object instanceof Map) {
+                                Map<String, Object> map = (Map<String, Object>) object;
+                                Double lat = (Double)map.get("lat");
+                                Double lon = (Double)map.get("lon");
+                                if (lat != null && lon != null) {
+                                    list = Collections.singletonList(new GeoPoint(lat, lon));
+                                }
+                            }
+                        }
                         for (Object object : list) {
                             context = context.createExternalValueContext(object);
                             if (copyTo != null) {
@@ -191,7 +205,7 @@ public class ReferenceMapper extends FieldMapper {
     }
 
     @Override
-    protected void parseCreateField(ParseContext parseContext, List<Field> fields) throws IOException {
+    protected void parseCreateField(ParseContext parseContext, List<IndexableField> fields) throws IOException {
         // override
     }
 

@@ -1,0 +1,20 @@
+{
+  "doc": {
+    "properties": {
+      "zipcode": {
+        "type": "ref",
+        "ref_index": "ref",
+        "ref_type": "ref",
+        "ref_fields": [
+          "point"
+        ],
+        "copy_to": [
+          "point"
+        ]
+      },
+      "point": {
+        "type": "geo_point"
+      }
+    }
+  }
+}

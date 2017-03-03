@@ -1,0 +1,9 @@
+{
+  "ref" : {
+    "properties": {
+      "point": {
+        "type": "geo_point"
+      }
+    }
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "country": "US",
+  "postalcode": "11229",
+  "place": "Brooklyn",
+  "adminname1": "New York",
+  "admincode1": "NY",
+  "adminname2": "Kings",
+  "admincode2": "047",
+  "point": {
+    "lat": 40.6011,
+    "lon": -73.9475
+  },
+  "accuracy": 4
+}

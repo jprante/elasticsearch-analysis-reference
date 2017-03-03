@@ -334,6 +334,114 @@ The result of both searches for `Gūta` is `Johann Wolfgang Goethe`
 }
 ----
 
+# Example: postal code lookup by geo search
+
+image:https://upload.wikimedia.org/wikipedia/commons/thumb/5/5d/10005_zip_code.jpg/1600px-10005_zip_code.jpg[Zip code]
+
+Image taken from Wikipedia https://en.wikipedia.org/wiki/File:10005_zip_code.jpg under the license
+Creative Commons Attribution-Share Alike 3.0 Unported
+
+Postal codes are a compact representation of geographical areas. They are systematically organized,
+can be memorized by humans and do not consume much space when being written down.
+A geographical area, at the opposite, requires a lot of knowledge about latitude, longitude,
+coordinate transformation system, and so on.
+
+Therefore, for humans it would be cumbersome to lookup geo coordinates for postal codes each time
+when they are used. It would be more feasible to let the computer receive postal codes, as entered,
+and add the geo coordinates automatically to allow geo search.
+
+This is possible by the reference plugin, with the help of the _geonames_ postal code data,
+available at http://download.geonames.org/export/zip/
+
+Let's index just one example postal code from geonames, it's from Brooklyn, NY, USA. You can easily imagine
+a whole set of postal code data indexed.
+
+[source]
+----
+PUT /ref
+{
+  "mappings": {
+    "ref" : {
+      "properties": {
+        "point": {
+          "type": "geo_point"
+        }
+      }
+    }
+  }
+}
+
+PUT /ref/ref/11229
+{
+  "country": "US",
+  "postalcode": "11229",
+  "place": "Brooklyn",
+  "adminname1": "New York",
+  "admincode1": "NY",
+  "adminname2": "Kings",
+  "admincode2": "047",
+  "point": {
+    "lat": 40.6011,
+    "lon": -73.9475
+  },
+  "accuracy": 4
+}
+----
+
+With the reference plugin, you can index a postal code
+
+[source]
+----
+PUT /doc
+{
+  "mappings": {
+    "doc": {
+      "properties": {
+        "zipcode": {
+          "type": "ref",
+          "ref_index": "ref",
+          "ref_type": "ref",
+          "ref_fields": [
+            "point"
+          ],
+          "copy_to": [
+            "point"
+          ]
+        },
+        "point": {
+          "type": "geo_point"
+        }
+      }
+    }
+  }
+}
+
+PUT /doc/doc/1
+{
+  "zipcode": "11229"
+}
+----
+
+and a geo query like this
+
+[source]
+----
+POST /doc/doc_search
+{
+  "query": {
+    "geo_distance" : {
+      "distance" : "1km",
+      "point" : {
+        "lat": 40.6011,
+        "lon": -73.9475
+      }
+    }
+  }
+}
+----
+
+will magically return the Brooklyn NY postal code document.
+
 # License
 
 Elasticsearch Reference Plugin
