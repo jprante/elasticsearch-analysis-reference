@@ -18,7 +18,7 @@ This plugin for link:http://github.com/elasticsearch/elasticsearch[Elasticsearch
 a reference mechanism for indexing content from other documents. The lookup takes place during
 the indexing (analysis field mapping) phase, not at search time.
 
-For example, if you have two indexes whre you want to link from one index to another by using
+For example, if you have two indexes where you want to link from one index to another by using
 document IDs, you can use this plugin to reference the content behind the ID.
 
 This process is also known as denormalization. Denormalization in this sense can be defined as 
